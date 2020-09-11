@@ -1,0 +1,3 @@
+# Example of a `.gitattributes` file which reclassifies the repository as Python:
+*.pyp linguist-language=Python
+*.ipynb linguist-language=Python
