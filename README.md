@@ -1,5 +1,5 @@
 # biDAQzmq
-Server/Client comunication tools for the biDAQzmq board
+Server/Client comunication tools for the biDAQ board
 
 ### Clone the repository locally
 Open up your terminal and clone the repository locally
