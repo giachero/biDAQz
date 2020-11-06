@@ -5,7 +5,11 @@ Server/Client comunication tools for the biDAQ board
 Open up your terminal and clone the repository locally
 ```
 $ mkdir ~/work>/dev/null 2>&1 && cd ~/work
-$ git clone git@github.com:giachero/qzmq.git
+$ git clone git@github.com:giachero/biDAQzmq.git
+```
+or Clone with HTTPS by using by the web URL
+```
+$ git clone https://github.com/giachero/biDAQzmq.git
 ```
 
 ### Documentation
