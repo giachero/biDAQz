@@ -1,5 +1,5 @@
-# qzmq
-Repository to study and test the universal messaging library [ZeroMQ](https://zeromq.org/) with Python 
+# biDAQzmq
+Server/Client comunication tools for the biDAQzmq board
 
 ### Clone the repository locally
 Open up your terminal and clone the repository locally
