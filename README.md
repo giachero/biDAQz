@@ -6,11 +6,11 @@ Open up your terminal and clone the repository locally
 Clone by using a password protected SSH key (preferred)
 ```
 $ mkdir ~/work>/dev/null 2>&1 && cd ~/work
-$ git clone git@github.com:giachero/biDAQzmq.git
+$ git clone git@github.com:giachero/biDAQz.git
 ```
 or Clone with HTTPS by using by the web URL
 ```
-$ git clone https://github.com/giachero/biDAQzmq.git
+$ git clone https://github.com/giachero/biDAQz.git
 ```
 
 ### Documentation
