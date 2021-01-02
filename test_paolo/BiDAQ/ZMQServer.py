@@ -29,7 +29,7 @@ def main():
     # Get own IP address
     Interface = 'eth0'
     IpAdrStr = netifaces.ifaddresses(Interface)[netifaces.AF_INET][0]['addr']
-    Port = 5678
+    Port = 2222
 
     # Bind the socket to own IP and port
     Sock.bind('tcp://' + IpAdrStr + ':' + str(Port))
