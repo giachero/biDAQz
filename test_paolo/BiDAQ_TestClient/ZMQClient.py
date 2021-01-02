@@ -50,7 +50,7 @@ def main():
     IpAdrStr = netifaces.ifaddresses(Interface)[netifaces.AF_INET][0]['addr']
     IpAdrList = list(map(int, IpAdrStr.split('.')))
     IpAdrDst = int.from_bytes(bytes(IpAdrList), byteorder='big', signed=False)
-    UDPPort = 5060
+    UDPPort = 2222
     DAQFreq = 2000
     SendFunction(Sock, 'StartDaq', [MacAdrDst, IpAdrDst, UDPPort, DAQFreq])
 
