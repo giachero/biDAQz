@@ -12,6 +12,8 @@ log = logging.getLogger("BiDAQ")
 
 # noinspection DuplicatedCode
 class BiDAQ:
+    """
+    """
 
     # Class constructor
     def __init__(self, Crate, BoardList=tuple(range(0, 8))):
@@ -88,7 +90,7 @@ class BiDAQ:
         return Status, SyncFreq, AdcFreq
 
     # Start DAQ
-    def StartDaq(self, MacAdrDst, IpAdrDst, UdpPortDst, Frequency, AdcParallelReadout=1):
+    def StartDaq(self, MacAdrDst, IpAdrDst, UdpPortDst, Frequency, AdcParallelReadout=True, DropTimestamp=True):
 
         Status = self.StopDaq()
         if Status < 0:
@@ -122,10 +124,10 @@ class BiDAQ:
         self.FPGA.UdpStreamer.SetUdpStreamEnable(1)
         self.FPGA.BoardControl.SetADCMode(AdcParallelReadout)
         self.FPGA.BoardControl.SetEnable(1)
-        self.FPGA.DataPacketizer.SetDropTimestamp(1)
+        self.FPGA.DataPacketizer.SetDropTimestamp(DropTimestamp)
         self.FPGA.DataPacketizer.SetPacketSamples(180)
         self.FPGA.DataPacketizer.SetRTPPayloadType(20)
-        self.FPGA.DataPacketizer.SetPayloadHeader(0xBEEF)
+        self.FPGA.DataPacketizer.SetPayloadHeader(self.FPGA.SyncGenerator.GetDivider(1)+1)
         self.FPGA.DataPacketizer.SetEnable(1)
         self.FPGA.SyncGenerator.SetClockRefEnable(1)
         self.FPGA.SyncGenerator.Reset()
@@ -212,6 +214,11 @@ def main():
 
     Parser.set_defaults(ADCParallelReadout=True)
 
+    Parser.add_option("-t", "--timestamp-append", dest="DropTimestamp", action='store_false',
+                      help="append timestamp to each sample")
+
+    Parser.set_defaults(DropTimestamp=True)
+
     Parser.add_option("-v", action="store_true", dest="Verbose",
                       help="provide more information regarding operation")
 
@@ -262,7 +269,7 @@ def main():
 
         logging.info("Starting DAQ...")
         Status = Daq.StartDaq(Options.MacAdrDst, Options.IpAdrDst, Options.UdpPortDst, Options.DaqFreq,
-                              Options.ADCParallelReadout)
+                              Options.ADCParallelReadout, Options.DropTimestamp)
         if Status < 0:
             logging.error("Error: Can't start DAQ")
         else:
