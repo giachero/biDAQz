@@ -57,8 +57,8 @@ class DataPacketizer:
     def GetPayloadHeader(self, Board):
         return self.FpgaReg.GetBoardSetting("BiDAQ_packetizer_", "PAYLOAD_HEADER", Board)
 
-    def GetFIFOFillCount(self, Board):
-        return self.FpgaReg.GetBoardSetting("BiDAQ_packetizer_", "FIFO_FILL_LEVEL", Board)
+    def GetFIFOFillCount(self, Board, Channel):
+        return self.FpgaReg.GetBoardSetting("BiDAQ_packetizer_", "FIFO_FILL_LEVEL_{}".format(Channel), Board)
 
     def GetPacketCount(self, Board):
         return self.FpgaReg.GetBoardSetting("BiDAQ_packetizer_", "PKT_CNT", Board)
@@ -66,8 +66,8 @@ class DataPacketizer:
     def GetDataCount(self, Board):
         return self.FpgaReg.GetBoardSetting("BiDAQ_packetizer_", "DAT_CNT", Board)
 
-    def GetFIFOMaxFillCount(self, Board):
-        return self.FpgaReg.GetBoardSetting("BiDAQ_packetizer_", "MAX_FILL_LEVEL", Board)
+    def GetFIFOMaxFillCount(self, Board, Channel):
+        return self.FpgaReg.GetBoardSetting("BiDAQ_packetizer_", "MAX_FILL_LEVEL_{}".format(Channel), Board)
 
-    def GetDroppedDataCount(self, Board):
-        return self.FpgaReg.GetBoardSetting("BiDAQ_packetizer_", "CNT_DROPPED", Board)
+    def GetDroppedDataCount(self, Board, Channel):
+        return self.FpgaReg.GetBoardSetting("BiDAQ_packetizer_", "CNT_DROPPED_{}".format(Channel), Board)

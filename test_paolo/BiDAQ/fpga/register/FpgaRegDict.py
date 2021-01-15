@@ -43,11 +43,19 @@ class FpgaRegDict:
             "EN": (0, 0)}
         BiDAQ_packetizer_1_bits = {"PACKET_SAMPLES": (0, 31)}
         BiDAQ_packetizer_2_bits = {"RTP_SOURCE": (0, 31)}
-        BiDAQ_packetizer_3_bits = {"FIFO_FILL_LEVEL": (0, 31)}
         BiDAQ_packetizer_4_bits = {"PKT_CNT": (0, 31)}
         BiDAQ_packetizer_5_bits = {"DAT_CNT": (0, 31)}
-        BiDAQ_packetizer_6_bits = {"MAX_FILL_LEVEL": (0, 31)}
-        BiDAQ_packetizer_7_bits = {"CNT_DROPPED": (0, 31)}
+
+        BiDAQ_packetizer_16_bits = dict()
+        BiDAQ_packetizer_32_bits = dict()
+        BiDAQ_packetizer_48_bits = dict()
+
+        for i in range(0, 12):
+            BiDAQ_packetizer_16_bits["BiDAQ_packetizer_{}_bits".format(16 + i)] = {
+                "FIFO_FILL_LEVEL_{}".format(i): (0, 31)}
+            BiDAQ_packetizer_32_bits["BiDAQ_packetizer_{}_bits".format(32 + i)] = {
+                "MAX_FILL_LEVEL_{}".format(i): (0, 31)}
+            BiDAQ_packetizer_48_bits["BiDAQ_packetizer_{}_bits".format(48 + i)] = {"CNT_DROPPED_{}".format(i): (0, 31)}
 
         BiDAQ_sync_generator_0_bits = {
             "RESET": (31, 31),
@@ -328,11 +336,20 @@ class FpgaRegDict:
                 "BiDAQ_packetizer_{}_0".format(i): (0x00011000 + 0x100 * i, BiDAQ_packetizer_0_bits),
                 "BiDAQ_packetizer_{}_1".format(i): (0x00011004 + 0x100 * i, BiDAQ_packetizer_1_bits),
                 "BiDAQ_packetizer_{}_2".format(i): (0x00011008 + 0x100 * i, BiDAQ_packetizer_2_bits),
-                "BiDAQ_packetizer_{}_3".format(i): (0x0001100C + 0x100 * i, BiDAQ_packetizer_3_bits),
                 "BiDAQ_packetizer_{}_4".format(i): (0x00011010 + 0x100 * i, BiDAQ_packetizer_4_bits),
-                "BiDAQ_packetizer_{}_5".format(i): (0x00011014 + 0x100 * i, BiDAQ_packetizer_5_bits),
-                "BiDAQ_packetizer_{}_6".format(i): (0x00011018 + 0x100 * i, BiDAQ_packetizer_6_bits),
-                "BiDAQ_packetizer_{}_7".format(i): (0x0001101C + 0x100 * i, BiDAQ_packetizer_7_bits)}
+                "BiDAQ_packetizer_{}_5".format(i): (0x00011014 + 0x100 * i, BiDAQ_packetizer_5_bits)}
+
+            for j in range(0, 12):
+                NewDict["BiDAQ_packetizer_{}_{}".format(i, 16 + j)] = (
+                    0x00011040 + 0x100 * i + 0x004 * j,
+                    BiDAQ_packetizer_16_bits["BiDAQ_packetizer_{}_bits".format(16 + j)])
+                NewDict["BiDAQ_packetizer_{}_{}".format(i, 32 + j)] = (
+                    0x00011080 + 0x100 * i + 0x004 * j,
+                    BiDAQ_packetizer_32_bits["BiDAQ_packetizer_{}_bits".format(32 + j)])
+                NewDict["BiDAQ_packetizer_{}_{}".format(i, 48 + j)] = (
+                    0x000110C0 + 0x100 * i + 0x004 * j,
+                    BiDAQ_packetizer_48_bits["BiDAQ_packetizer_{}_bits".format(48 + j)])
+
             LocalRegDict["BiDAQ_packetizer_{}".format(i)] = NewDict
 
             NewDict = {
