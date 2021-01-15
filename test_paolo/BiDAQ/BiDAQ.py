@@ -13,18 +13,38 @@ log = logging.getLogger("BiDAQ")
 # noinspection DuplicatedCode
 class BiDAQ:
     """
+    BiDAQ is the class to control the FPGA registers (through /dev/mem) and the BiDAQ boards (through CAN bus)
     """
 
     # Class constructor
     def __init__(self, Crate, BoardList=tuple(range(0, 8))):
+        """
+        BiDAQ class constructor
+        :param Crate: crate number - TODO: determine automatically
+        :type Crate: int
+        :param BoardList: list of connected boards - TODO: determine automatically
+        :type BoardList: list or tuple of integers
+        """
 
         self.FPGA = BiDAQFPGA.BiDAQFPGA(BoardList)
         self.Board = list()
         for i in BoardList:
             self.Board.append(BiDAQBoard.BiDAQBoard(Crate, i))
 
-    # Configure channels from a list
     def SetChannelConfigList(self, ConfigList):
+        """
+        Configure channels using a list or tuple
+        :param ConfigList: channel configuration passed as a list of lists. Each element of the list must have 5
+        elements: [Board, Channel, Ground, Enable, Frequency]. Board is a list of boards (counting from 0), e.g. [0,1].
+        Channel is a list of channels (0 means all channels of the board, 1-12), e.g. [1,2,3,4]. Ground is the setting
+        for grounding the inputs (valid options are 0, 1, False or True). Enable is the setting to enable the Bessel
+        filter (same options as before). Frequency is an int value for the Bessel filter cut-off frequency (valid
+        values are from 24 to 2500). Example:
+        [[[0,1],[1,2,3,4,5,6],True,True,24],[0,1],[7,8,9,10,11,12],False,False,100]]
+        :type ConfigList: list or tuple
+        :return: return status (a negative value means error)
+        :rtype: int
+        """
         Status = 0
         for Line in ConfigList:
             for Brd in Line[0]:
@@ -46,8 +66,19 @@ class BiDAQ:
                         )
         return Status
 
-    # Configure channels from a dictionary
     def SetChannelConfigDict(self, ConfigDict):
+        """
+        Configure channels using a dictionary
+        ..mah
+        :param ConfigDict: channel configuration is passed as a dictionary or list of dictionaries. Each key or element
+        is a dictionary which must have specific keys: 'Board' - list of boards (counting from 0), e.g. [0,1], 'Channel'
+        - list of channels (1-12, 0 means all), 'Ground' - setting for grounding the inputs (valid options are 0, 1,
+        False or True), 'Enable' - setting to enable the Bessel filter (same options as before), 'Freq' - int value for
+        the Bessel filter cut-off frequency (valid values are from 24 to 2500).
+        :type ConfigDict: dict
+        :return: return status (a negative value means error)
+        :rtype: int
+        """
         Status = 0
         for Key in ConfigDict:
             for Brd in ConfigDict[Key]['Board']:
@@ -69,7 +100,6 @@ class BiDAQ:
                         )
         return Status
 
-    # Set DAQ frequency
     def SetFrequency(self, Frequency):
 
         SyncFreqDiv = round(500000 / (2 * Frequency))
@@ -127,7 +157,7 @@ class BiDAQ:
         self.FPGA.DataPacketizer.SetDropTimestamp(DropTimestamp)
         self.FPGA.DataPacketizer.SetPacketSamples(180)
         self.FPGA.DataPacketizer.SetRTPPayloadType(20)
-        self.FPGA.DataPacketizer.SetPayloadHeader(self.FPGA.SyncGenerator.GetDivider(1)+1)
+        self.FPGA.DataPacketizer.SetPayloadHeader(self.FPGA.SyncGenerator.GetDivider(1) + 1)
         self.FPGA.DataPacketizer.SetEnable(1)
         self.FPGA.SyncGenerator.SetClockRefEnable(1)
         self.FPGA.SyncGenerator.Reset()
