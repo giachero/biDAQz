@@ -65,7 +65,8 @@ class FpgaRegDict:
             "ENABLE": (0, 0)}
         BiDAQ_sync_generator_1_bits = {"DIVIDER": (0, 23)}
         BiDAQ_sync_generator_2_bits = {"PULSE_WIDTH": (0, 23)}
-        BiDAQ_sync_generator_3_bits = {"TIMESTAMP": (0, 31)}
+        BiDAQ_sync_generator_3_bits = {"TIMESTAMP_RESET_VALUE": (0, 31)}
+        BiDAQ_sync_generator_4_bits = {"TIMESTAMP": (0, 31)}
 
         BiDAQ_sync_ref_generator_0_bits = {
             "EXT_CLK_REF_OUT_ENA": (3, 3),
@@ -356,7 +357,8 @@ class FpgaRegDict:
                 "BiDAQ_sync_generator_{}_0".format(i): (0x00012000 + 0x100 * i, BiDAQ_sync_generator_0_bits),
                 "BiDAQ_sync_generator_{}_1".format(i): (0x00012004 + 0x100 * i, BiDAQ_sync_generator_1_bits),
                 "BiDAQ_sync_generator_{}_2".format(i): (0x00012008 + 0x100 * i, BiDAQ_sync_generator_2_bits),
-                "BiDAQ_sync_generator_{}_3".format(i): (0x0001200C + 0x100 * i, BiDAQ_sync_generator_3_bits)}
+                "BiDAQ_sync_generator_{}_3".format(i): (0x0001200C + 0x100 * i, BiDAQ_sync_generator_3_bits),
+                "BiDAQ_sync_generator_{}_4".format(i): (0x00012010 + 0x100 * i, BiDAQ_sync_generator_4_bits)}
             LocalRegDict["BiDAQ_sync_generator_{}".format(i)] = NewDict
 
         return LocalRegDict

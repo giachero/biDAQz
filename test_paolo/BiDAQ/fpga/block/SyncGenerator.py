@@ -72,5 +72,11 @@ class SyncGenerator:
     def GetPulseWidth(self, Board):
         return self.FpgaReg.GetBoardSetting("BiDAQ_sync_generator_", "PULSE_WIDTH", Board)
 
+    def SetTimestampResetValue(self, TimestampResetValue, Board=None):
+        self.FpgaReg.SetBoardSetting("BiDAQ_sync_generator_", "TIMESTAMP_RESET_VALUE", TimestampResetValue, Board)
+
+    def GetTimestampResetValue(self, Board):
+        return self.FpgaReg.GetBoardSetting("BiDAQ_sync_generator_", "TIMESTAMP_RESET_VALUE", Board)
+
     def GetTimestamp(self, Board):
         return self.FpgaReg.GetBoardSetting("BiDAQ_sync_generator_", "TIMESTAMP", Board)

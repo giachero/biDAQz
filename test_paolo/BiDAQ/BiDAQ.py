@@ -6,6 +6,7 @@ import warnings
 import logging
 import sys
 import optparse
+import time
 
 log = logging.getLogger("BiDAQ")
 
@@ -120,7 +121,8 @@ class BiDAQ:
         return Status, SyncFreq, AdcFreq
 
     # Start DAQ
-    def StartDaq(self, MacAdrDst, IpAdrDst, UdpPortDst, Frequency, AdcParallelReadout=True, DropTimestamp=True):
+    def StartDaq(self, MacAdrDst, IpAdrDst, UdpPortDst, Frequency, SamplesPerPacket=180, AdcParallelReadout=True,
+                 DropTimestamp=True, RTPPayloadType=20):
 
         Status = self.StopDaq()
         if Status < 0:
@@ -145,6 +147,7 @@ class BiDAQ:
                 log.warning("Warning. StartDAQ - Brd: {}, Status: {}, Value: {}".format(Brd, Status, Value))
                 return Status
 
+        # Setup the UDP packet creator with own and destination addresses
         self.FPGA.UdpStreamer.SetUdpStreamEnable(0)
         self.FPGA.UdpStreamer.AutoSetUdpStreamSourAddr()
         self.FPGA.UdpStreamer.SetUdpStreamDestMac(MacAdrDst)
@@ -152,23 +155,36 @@ class BiDAQ:
         self.FPGA.UdpStreamer.SetUdpStreamDestPort(UdpPortDst)
         self.FPGA.UdpStreamer.SetUdpStreamSourPort(UdpPortDst)
         self.FPGA.UdpStreamer.SetUdpStreamEnable(1)
+
+        # Enable the SPI block
         self.FPGA.BoardControl.SetADCMode(AdcParallelReadout)
         self.FPGA.BoardControl.SetEnable(1)
+
+        # Setup the RTP packet creator
         self.FPGA.DataPacketizer.SetDropTimestamp(DropTimestamp)
-        self.FPGA.DataPacketizer.SetPacketSamples(180)
-        self.FPGA.DataPacketizer.SetRTPPayloadType(20)
+        self.FPGA.DataPacketizer.SetPacketSamples(SamplesPerPacket)
+        self.FPGA.DataPacketizer.SetRTPPayloadType(RTPPayloadType)
         self.FPGA.DataPacketizer.SetPayloadHeader(self.FPGA.SyncGenerator.GetDivider(1) + 1)
         self.FPGA.DataPacketizer.SetEnable(1)
-        self.FPGA.SyncGenerator.SetClockRefEnable(1)
-        self.FPGA.SyncGenerator.Reset()
+
+        # General enable (this is obsolete)
         self.FPGA.GeneralEnable.SetEnable(1)
+
+        # Setup the sync generator block
+        self.FPGA.SyncGenerator.SetTimestampResetValue(0xFFFFFFFF)
+        self.FPGA.SyncGenerator.Reset()
         self.FPGA.SyncGenerator.SetEnable(1)
+
+        # Start the acquisition by applying the sync clock, in common to all boards
+        self.FPGA.SyncGenerator.SetClockRefEnable(1)
 
         return 0
 
     # Stop DAQ
     def StopDaq(self):
 
+        self.FPGA.SyncGenerator.SetClockRefEnable(0)
+        time.sleep(0.05) # TODO: poll some registers to check that transmission is over
         self.FPGA.SyncGenerator.SetEnable(0)
         self.FPGA.GeneralEnable.SetEnable(0)
         self.FPGA.BoardControl.SetEnable(0)
@@ -249,6 +265,12 @@ def main():
 
     Parser.set_defaults(DropTimestamp=True)
 
+    Parser.add_option("-S", "--samples-per-packet", dest="SamplesPerPacket", type=int, default=180,
+                      help="select number of samples per packet", metavar="SAMPLES")
+
+    Parser.add_option("-P", "--payload-type", dest="RTPPayloadType", type=int, default=20,
+                      help="select the RTP payload type", metavar="PT")
+
     Parser.add_option("-v", action="store_true", dest="Verbose",
                       help="provide more information regarding operation")
 
@@ -299,7 +321,8 @@ def main():
 
         logging.info("Starting DAQ...")
         Status = Daq.StartDaq(Options.MacAdrDst, Options.IpAdrDst, Options.UdpPortDst, Options.DaqFreq,
-                              Options.ADCParallelReadout, Options.DropTimestamp)
+                              Options.SamplesPerPacket, Options.ADCParallelReadout, Options.DropTimestamp,
+                              Options.RTPPayloadType)
         if Status < 0:
             logging.error("Error: Can't start DAQ")
         else:
