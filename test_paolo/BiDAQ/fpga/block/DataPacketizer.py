@@ -40,10 +40,10 @@ class DataPacketizer:
         return self.FpgaReg.GetBoardSetting("BiDAQ_packetizer_", "RTP_PAYLOAD_TYPE", Board)
 
     def SetPacketSamples(self, Samples, Board=None):
-        self.FpgaReg.SetBoardSetting("BiDAQ_packetizer_", "PACKET_SAMPLES", Samples-1, Board)
+        self.FpgaReg.SetBoardSetting("BiDAQ_packetizer_", "PACKET_SAMPLES", Samples - 1, Board)
 
     def GetPacketSamples(self, Board):
-        return self.FpgaReg.GetBoardSetting("BiDAQ_packetizer_", "PACKET_SAMPLES", Board)+1
+        return self.FpgaReg.GetBoardSetting("BiDAQ_packetizer_", "PACKET_SAMPLES", Board) + 1
 
     def SetRTPSource(self, Source, Board=None):
         self.FpgaReg.SetBoardSetting("BiDAQ_packetizer_", "RTP_SOURCE", Source, Board)
@@ -71,3 +71,21 @@ class DataPacketizer:
 
     def GetDroppedDataCount(self, Board, Channel):
         return self.FpgaReg.GetBoardSetting("BiDAQ_packetizer_", "CNT_DROPPED_{}".format(Channel), Board)
+
+    def ResetCounters(self, Board=None, Channel=None):
+
+        # Build channel list
+        if Channel is None:
+            ChannelList = list(range(0, 12))
+        else:
+            ChannelList = list(range(Channel, 1))
+
+        # Reset channel registers
+        for i in ChannelList:
+            self.FpgaReg.SetBoardSetting("BiDAQ_packetizer_", "FIFO_FILL_LEVEL_{}".format(i), 0, Board)
+            self.FpgaReg.SetBoardSetting("BiDAQ_packetizer_", "MAX_FILL_LEVEL_{}".format(i), 0, Board)
+            self.FpgaReg.SetBoardSetting("BiDAQ_packetizer_", "CNT_DROPPED_{}".format(i), 0, Board)
+
+        # Reset block registers
+        self.FpgaReg.SetBoardSetting("BiDAQ_packetizer_", "PKT_CNT", 0, Board)
+        self.FpgaReg.SetBoardSetting("BiDAQ_packetizer_", "DAT_CNT", 0, Board)
