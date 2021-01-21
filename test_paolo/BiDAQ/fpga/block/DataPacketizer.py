@@ -89,3 +89,31 @@ class DataPacketizer:
         # Reset block registers
         self.FpgaReg.SetBoardSetting("BiDAQ_packetizer_", "PKT_CNT", 0, Board)
         self.FpgaReg.SetBoardSetting("BiDAQ_packetizer_", "DAT_CNT", 0, Board)
+
+    def GetMonitorRegisters(self, BoardList=None, ChannelList=None):
+
+        if BoardList is None:
+            BoardList = self.FpgaReg.BoardList
+
+        if ChannelList is None:
+            ChannelList = list(range(0, 12))
+
+        RetDict = dict()
+
+        for Brd in BoardList:
+            RetDict["Board_{}".format(Brd)] = dict()
+            RetDict["Board_{}".format(Brd)]["Board"] = Brd
+            RetDict["Board_{}".format(Brd)]["DataPacketizer"] = dict()
+            RetDict["Board_{}".format(Brd)]["DataPacketizer"]["SamplesSent"] = self.GetDataCount(Brd)
+            RetDict["Board_{}".format(Brd)]["DataPacketizer"]["PacketsSent"] = self.GetPacketCount(Brd)
+            for Ch in ChannelList:
+                RetDict["Board_{}".format(Brd)]["DataPacketizer"]["Channel_{}".format(Ch)] = dict()
+                RetDict["Board_{}".format(Brd)]["DataPacketizer"]["Channel_{}".format(Ch)]["Channel"] = Ch
+                RetDict["Board_{}".format(Brd)]["DataPacketizer"]["Channel_{}".format(Ch)]["DroppedSamples"] = \
+                    self.GetDroppedDataCount(Brd, Ch)
+                RetDict["Board_{}".format(Brd)]["DataPacketizer"]["Channel_{}".format(Ch)]["FIFOFillLevel"] = \
+                    self.GetFIFOFillCount(Brd, Ch)
+                RetDict["Board_{}".format(Brd)]["DataPacketizer"]["Channel_{}".format(Ch)]["FIFOMaxFillLevel"] = \
+                    self.GetFIFOMaxFillCount(Brd, Ch)
+
+        return RetDict

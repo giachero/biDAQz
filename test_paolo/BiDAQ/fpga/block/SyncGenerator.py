@@ -59,7 +59,7 @@ class SyncGenerator:
         else:
             Enable = self.GetEnable(Board)
         if not Enable:
-            self.FpgaReg.SetBoardSetting("BiDAQ_sync_generator_", "DIVIDER", Divider-1, Board)
+            self.FpgaReg.SetBoardSetting("BiDAQ_sync_generator_", "DIVIDER", Divider - 1, Board)
         else:
             raise Exception("Divider can't be set while SyncGenerator is running")
 
@@ -80,3 +80,18 @@ class SyncGenerator:
 
     def GetTimestamp(self, Board):
         return self.FpgaReg.GetBoardSetting("BiDAQ_sync_generator_", "TIMESTAMP", Board)
+
+    def GetMonitorRegisters(self, BoardList=None):
+
+        if BoardList is None:
+            BoardList = self.FpgaReg.BoardList
+
+        RetDict = dict()
+
+        for Brd in BoardList:
+            RetDict["Board_{}".format(Brd)] = dict()
+            RetDict["Board_{}".format(Brd)]["Board"] = Brd
+            RetDict["Board_{}".format(Brd)]["SyncGenerator"] = dict()
+            RetDict["Board_{}".format(Brd)]["SyncGenerator"]["Timestamp"] = self.GetTimestamp(Brd)
+
+        return RetDict

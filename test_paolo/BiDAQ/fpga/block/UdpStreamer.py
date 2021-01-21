@@ -94,3 +94,11 @@ class UdpStreamer:
 
     def GetUdpStreamPacketCount(self):
         return self.FpgaReg.ReadBits("udp_payload_inserter", "PACKET_COUNT")
+
+    def GetMonitorRegisters(self):
+        RetDict = dict()
+
+        RetDict["UdpStreamer"] = dict()
+        RetDict["UdpStreamer"]["PacketsSent"] = self.GetUdpStreamPacketCount()
+
+        return RetDict

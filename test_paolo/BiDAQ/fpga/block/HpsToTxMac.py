@@ -24,3 +24,12 @@ class HpsToTxMac:
 
     def GetDataCounter(self):
         return self.FpgaReg.ReadBits("gmii_to_avalon_st_converter", "DAT_CNT")
+
+    def GetMonitorRegisters(self):
+        RetDict = dict()
+
+        RetDict["HpsToMac"] = dict()
+        RetDict["HpsToMac"]["DataSent"] = self.GetDataCounter()
+        RetDict["HpsToMac"]["PacketsSent"] = self.GetPacketCounter()
+
+        return RetDict

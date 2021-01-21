@@ -33,7 +33,7 @@ class FpgaRegDict:
         pio_en_n_bits = {"EN_N": (0, 0)}
 
         sys_id_0_bits = {"SYSTEM_ID": (0, 31)}
-        sys_id_1_bits = {"SYSTEM_ID": (0, 31)}
+        sys_id_1_bits = {"SYSTEM_ID_TIMESTAMP": (0, 31)}
 
         BiDAQ_packetizer_0_bits = {
             "PAYLOAD_HEADER": (12, 31),

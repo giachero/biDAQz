@@ -155,3 +155,17 @@ class TxMac:
         except:
             return -1
         return 0
+
+    def GetMonitorRegisters(self):
+        RetDict = dict()
+
+        RetDict["TxMac"] = dict()
+        RetDict["TxMac"]["PacketsSent"] = self.GetStatisticsCounter("aFramesTransmittedOK")
+        RetDict["TxMac"]["BytesSent"] = self.GetStatisticsCounter("aOctetsTransmittedOK")
+        RetDict["TxMac"]["PauseFrameSent"] = self.GetStatisticsCounter("aTxPAUSEMACCtrlFrames")
+        RetDict["TxMac"]["ErrorPackets"] = self.GetStatisticsCounter("ifOutErrors")
+        RetDict["TxMac"]["UnicastPackets"] = self.GetStatisticsCounter("ifOutUcastPkts")
+        RetDict["TxMac"]["MulticastPackets"] = self.GetStatisticsCounter("ifOutMulticastPkts")
+        RetDict["TxMac"]["BroadcastPackets"] = self.GetStatisticsCounter("ifOutBroadcastPkts")
+
+        return RetDict
