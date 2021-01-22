@@ -201,8 +201,9 @@ class BiDAQ:
         # Setup the UDP packet creator with own and destination addresses
         self.FPGA.UdpStreamer.SetUdpStreamEnable(0)
         self.FPGA.UdpStreamer.AutoSetUdpStreamSourAddr()
-        self.FPGA.UdpStreamer.SetUdpStreamDestMac(MacAdrDst)
+        # self.FPGA.UdpStreamer.SetUdpStreamDestMac(MacAdrDst)
         self.FPGA.UdpStreamer.SetUdpStreamDestIp(IpAdrDst)
+        self.FPGA.UdpStreamer.AutoSetUdpStreamDestMac()
         self.FPGA.UdpStreamer.SetUdpStreamDestPort(UdpPortDst)
         self.FPGA.UdpStreamer.SetUdpStreamSourPort(UdpPortDst)
         self.FPGA.UdpStreamer.SetUdpStreamEnable(1)

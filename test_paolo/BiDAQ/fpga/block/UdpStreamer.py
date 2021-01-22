@@ -1,8 +1,55 @@
 #!/usr/bin/python
 
 import netifaces
+import subprocess
 
 from ..register import FpgaReg
+
+
+def GetMacFromIp(Ip, PingFlag=False):
+    # Default return value
+    Mac = None
+    # Perform ping, only if requested
+    if PingFlag:
+        # Ping the requested IP
+        Ping = subprocess.Popen(['ping', '-c 1 -W 1', str(Ip)], stdout=subprocess.PIPE)
+        while True:
+            # Poll return code
+            ReturnCode = Ping.poll()
+            if ReturnCode is not None:
+                # If successful, break polling loop
+                break
+    # Read ARP table
+    Arp = subprocess.Popen('ipneigh', stdout=subprocess.PIPE)
+    while True:
+        # Poll return code
+        ReturnCode = Arp.poll()
+        if ReturnCode is not None:
+            # Get command output
+            Output, Err = Arp.communicate()
+            # Decode it to string
+            OutputStr = Output.decode('utf-8')
+            # Parse rows
+            for Row in OutputStr.splitlines():
+                # Split row fields
+                RowSplit = Row.split()
+                # Convert first field to IP address (decimal)
+                IpFromStr = int.from_bytes(list(map(int, RowSplit[0].split('.'))), 'big')
+                # If IP address matches the one requested, extract the MAC address (decimal)
+                if Ip == IpFromStr:
+                    print(RowSplit[-1])
+                    if RowSplit[-1] != "FAILED":
+                        Mac = int(RowSplit[4].replace(':', ''), 16)
+                        break
+            # After parsing all the rows, break polling
+            break
+    # Return MAC address
+    return Mac
+
+
+def GetMacGateway():
+    IpGateway = int.from_bytes(list(map(int, netifaces.gateways()['default'][netifaces.AF_INET][0].split('.'))), 'big')
+    return GetMacFromIp(IpGateway)
 
 
 class UdpStreamer:
@@ -33,6 +80,16 @@ class UdpStreamer:
         MAC_LSB = self.FpgaReg.ReadBits("udp_payload_inserter", "DEST_MAC_ADDRESS_LSB")
         MAC_MSB = self.FpgaReg.ReadBits("udp_payload_inserter", "DEST_MAC_ADDRESS_MSB")
         return MAC_LSB | (MAC_MSB << 16)
+
+    def AutoSetUdpStreamDestMac(self):
+        IP = self.GetUdpStreamDestIp()
+        MAC = GetMacFromIp(IP, False)
+        if MAC is None:
+            MAC = GetMacFromIp(IP, True)
+        if MAC is None:
+            MAC = GetMacGateway()
+        self.SetUdpStreamDestMac(MAC)
+        return 0
 
     def SetUdpStreamSourMac(self, MAC):
         self.FpgaReg.WriteBits("udp_payload_inserter", "SOUR_MAC_ADDRESS_LSB", MAC & 0xFFFF)
