@@ -150,13 +150,11 @@ class BiDAQ:
         return Status, SyncFreq, AdcFreq
 
     # Start DAQ
-    def StartDaq(self, MacAdrDst, IpAdrDst, UdpPortDst, Frequency, SamplesPerPacket=180, AdcParallelReadout=True,
+    def StartDaq(self, IpAdrDst, UdpPortDst, Frequency, SamplesPerPacket=180, AdcParallelReadout=True,
                  DropTimestamp=True, RTPPayloadType=20):
         """
         Start the DAQ.
 
-        :param MacAdrDst: destination MAC address.
-        :type MacAdrDst: int
         :param IpAdrDst: destination IP address.
         :type IpAdrDst: int
         :param UdpPortDst: destination and source UDP ports.
@@ -341,8 +339,8 @@ def main():
     Parser.add_option("-F", "--daq-frequency", dest="DaqFreq", type=int, default=1000,
                       help="select daq frequency", metavar="FREQ")
 
-    Parser.add_option("-m", "--mac-address", dest="MacAdrDst", type=int, default=0x123456789ABC,
-                      help="select destination mac address", metavar="MAC")
+    # Parser.add_option("-m", "--mac-address", dest="MacAdrDst", type=int, default=0x123456789ABC,
+    #                  help="select destination mac address", metavar="MAC")
 
     Parser.add_option("-i", "--ip-address", dest="IpAdrDst", type=int, default=0xC0A80104,
                       help="select destination ip address", metavar="IP")
@@ -411,7 +409,7 @@ def main():
         Daq.SetChannelConfigList(CfgList)
 
         logging.info("Starting DAQ...")
-        Status = Daq.StartDaq(Options.MacAdrDst, Options.IpAdrDst, Options.UdpPortDst, Options.DaqFreq,
+        Status = Daq.StartDaq(Options.IpAdrDst, Options.UdpPortDst, Options.DaqFreq,
                               Options.SamplesPerPacket, Options.ADCParallelReadout, Options.DropTimestamp,
                               Options.RTPPayloadType)
         if Status < 0:

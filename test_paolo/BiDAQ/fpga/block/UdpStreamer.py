@@ -37,7 +37,6 @@ def GetMacFromIp(Ip, PingFlag=False):
                 IpFromStr = int.from_bytes(list(map(int, RowSplit[0].split('.'))), 'big')
                 # If IP address matches the one requested, extract the MAC address (decimal)
                 if Ip == IpFromStr:
-                    print(RowSplit[-1])
                     if RowSplit[-1] != "FAILED":
                         Mac = int(RowSplit[4].replace(':', ''), 16)
                         break
