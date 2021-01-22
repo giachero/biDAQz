@@ -48,7 +48,9 @@ def GetMacFromIp(Ip, PingFlag=False):
 
 
 def GetMacGateway():
+    # Get IP address of the gateway
     IpGateway = int.from_bytes(list(map(int, netifaces.gateways()['default'][netifaces.AF_INET][0].split('.'))), 'big')
+    # Return its MAC address
     return GetMacFromIp(IpGateway)
 
 
@@ -82,12 +84,17 @@ class UdpStreamer:
         return MAC_LSB | (MAC_MSB << 16)
 
     def AutoSetUdpStreamDestMac(self):
+        # Get destination IP address set previously
         IP = self.GetUdpStreamDestIp()
+        # Get MAC from this address, without ping (using current ARP table)
         MAC = GetMacFromIp(IP, False)
+        # If no MAC is found, repeat operation with ping (to update ARP table)
         if MAC is None:
             MAC = GetMacFromIp(IP, True)
+        # If no MAC is found, then the IP must be outside the local network. Get the gateway MAC
         if MAC is None:
             MAC = GetMacGateway()
+        # Set the MAC
         self.SetUdpStreamDestMac(MAC)
         return 0
 
