@@ -44,6 +44,17 @@ class BiDAQ:
             if self.Board[-1].NOP()[0] < 0:
                 self.Board.pop()
 
+    def FindBoardIdx(self, Brd):
+        """
+        Get board index from board number
+        """
+
+        for BrdIdx in range(len(self.Board)):
+            if self.Board[BrdIdx].Board == Brd:
+                return BrdIdx
+
+        return None
+
     def SetChannelConfigList(self, ConfigList):
         """
         Configure channels using a list or tuple.
@@ -72,7 +83,8 @@ class BiDAQ:
                                                                                                               Ground,
                                                                                                               Enable,
                                                                                                               Freq))
-                    Status, Value = self.Board[Brd].WriteFilterSettings(Channel, Freq, Enable, Ground)
+                    BrdIdx = self.FindBoardIdx(Brd)
+                    Status, Value = self.Board[BrdIdx].WriteFilterSettings(Channel, Freq, Enable, Ground)
                     if Status < 0:
                         warnings.warn(
                             "Warning. SetChannelConfig - Brd: {}, Ch: {}, Status: {}, Value: {}".format(Brd, Channel,
@@ -106,7 +118,8 @@ class BiDAQ:
                                                                                                               Ground,
                                                                                                               Enable,
                                                                                                               Freq))
-                    Status, Value = self.Board[Brd].WriteFilterSettings(Channel, Freq, Enable, Ground)
+                    BrdIdx = self.FindBoardIdx(Brd)
+                    Status, Value = self.Board[BrdIdx].WriteFilterSettings(Channel, Freq, Enable, Ground)
                     if Status < 0:
                         warnings.warn(
                             "Warning. SetChannelConfig - Brd: {}, Ch: {}, Status: {}, Value: {}".format(Brd, Channel,
