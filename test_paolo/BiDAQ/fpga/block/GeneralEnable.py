@@ -23,7 +23,7 @@ class GeneralEnable:
         return self.FpgaReg.ReadBits("pio_ms_out", "MASTER_OUT")
 
     def ReadMaster(self):
-        return self.FpgaReg.ReadBits("pio_ms_in", "MASTER_IN")
+        return int(not self.FpgaReg.ReadBits("pio_ms_in", "MASTER_IN"))
 
     def SetStart(self, Start):
         self.FpgaReg.WriteBits("pio_ms_out", "START_OUT", Start)
@@ -32,4 +32,4 @@ class GeneralEnable:
         return self.FpgaReg.ReadBits("pio_ms_out", "START_OUT")
 
     def ReadStart(self):
-        return self.FpgaReg.ReadBits("pio_ms_in", "START_IN")
+        return int(not self.FpgaReg.ReadBits("pio_ms_in", "START_IN"))

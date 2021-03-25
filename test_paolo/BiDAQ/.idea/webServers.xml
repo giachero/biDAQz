@@ -3,7 +3,7 @@
   <component name="WebServers">
     <option name="servers">
       <webServer id="5072ce27-093d-4ca6-832f-9348a8cbddf1" name="root@pcelet26.mib.infn.it:22" url="http:///">
-        <fileTransfer accessType="SFTP" host="pcelet26.mib.infn.it" port="22" sshConfigId="991189f3-b1b1-4224-82da-795f36fd90fd" sshConfig="root@pcelet26.mib.infn.it:22 password" />
+        <fileTransfer accessType="SFTP" host="192.168.1.10" port="22" sshConfigId="991189f3-b1b1-4224-82da-795f36fd90fd" sshConfig="root@192.168.1.10:22 password" />
       </webServer>
     </option>
   </component>
