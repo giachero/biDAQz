@@ -15,3 +15,21 @@ class GeneralEnable:
 
     def GetEnable(self):
         return not self.FpgaReg.ReadBits("pio_en_n", "EN_N")
+
+    def SetMaster(self, Master):
+        self.FpgaReg.WriteBits("pio_ms_out", "MASTER_OUT", Master)
+
+    def GetMaster(self):
+        return self.FpgaReg.ReadBits("pio_ms_out", "MASTER_OUT")
+
+    def ReadMaster(self):
+        return self.FpgaReg.ReadBits("pio_ms_in", "MASTER_IN")
+
+    def SetStart(self, Start):
+        self.FpgaReg.WriteBits("pio_ms_out", "START_OUT", Start)
+
+    def GetStart(self):
+        return self.FpgaReg.ReadBits("pio_ms_out", "START_OUT")
+
+    def ReadStart(self):
+        return self.FpgaReg.ReadBits("pio_ms_in", "START_IN")

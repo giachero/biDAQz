@@ -30,6 +30,14 @@ class FpgaRegDict:
             "LED2": (2, 2),
             "LED3": (3, 3)}
 
+        pio_ms_out_bits = {
+            "MASTER_OUT": (0, 0),
+            "START_OUT": (1, 1)}
+
+        pio_ms_in_bits = {
+            "MASTER_IN": (0, 0),
+            "START_IN": (1, 1)}
+
         pio_en_n_bits = {"EN_N": (0, 0)}
 
         sys_id_0_bits = {"SYSTEM_ID": (0, 31)}
@@ -197,6 +205,11 @@ class FpgaRegDict:
 
             # pio_en_n
             "pio_en_n": (0x00002000, pio_en_n_bits),
+
+            # pio_ms_out_bits
+            "pio_ms_out": (0x00002100, pio_ms_out_bits),
+            # pio_ms_in_bits
+            "pio_ms_in": (0x00002200, pio_ms_in_bits),
 
             # sys_id
             "sys_id": {
