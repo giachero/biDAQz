@@ -239,7 +239,7 @@ class BiDAQ:
         self.FPGA.SyncGenerator.SetEnable(1)
 
         # Start the acquisition by applying the sync clock, in common to all boards
-        self.FPGA.SyncGenerator.SetClockRefEnable(1)
+        self.FPGA.ClockRefGenerator.SetEnable(1)
 
         return 0
 
@@ -252,7 +252,7 @@ class BiDAQ:
         :rtype: int
         """
 
-        self.FPGA.SyncGenerator.SetClockRefEnable(0)
+        self.FPGA.ClockRefGenerator.SetEnable(0)
         time.sleep(0.05)  # TODO: poll some registers to check that transmission is over
         self.FPGA.SyncGenerator.SetEnable(0)
         self.FPGA.GeneralEnable.SetEnable(0)

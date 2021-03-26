@@ -6,6 +6,7 @@ from .block import GeneralEnable
 from .block import HpsToTxMac
 from .block import ScFifo
 from .block import SyncGenerator
+from .block import ClockRefGenerator
 from .block import TxMac
 from .block import UdpStreamer
 from .block import SysId
@@ -31,6 +32,7 @@ class BiDAQFPGA:
         self.BoardControl = BoardControl.BoardControl(BoardList)
         self.DataPacketizer = DataPacketizer.DataPacketizer(BoardList)
         self.SyncGenerator = SyncGenerator.SyncGenerator(BoardList)
+        self.ClockRefGenerator = ClockRefGenerator.ClockRefGenerator()
         self.UdpStreamer = UdpStreamer.UdpStreamer()
         self.GeneralEnable = GeneralEnable.GeneralEnable()
         self.TxMac = TxMac.TxMac()
