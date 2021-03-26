@@ -50,4 +50,3 @@ class ClockRefGenerator:
 
     def GetDivider(self):
         return self.FpgaReg.ReadBits("BiDAQ_sync_ref_generator", "DIVIDER") + 1
-
