@@ -4,7 +4,7 @@ from .sensors import sensors
 class HWMonitor:
 
     # Class constructor
-    def __init__(self, VoltageThreshold=0.1, TempThreshold=80):
+    def __init__(self, VoltageThreshold=0.1, TempThreshold=80, FanThreshold=0):
 
         sensors.init()
         for Chip in sensors.iter_detected_chips():
@@ -14,6 +14,7 @@ class HWMonitor:
 
         self.VoltageThreshold = VoltageThreshold
         self.TempThreshold = TempThreshold
+        self.FanThreshold = FanThreshold
 
     def __del__(self):
         sensors.cleanup()
@@ -43,7 +44,7 @@ class HWMonitor:
 
         for Key in SensorResults:
             if "Fan" in Key:
-                LowThr = 0
+                LowThr = self.FanThreshold
                 HighThr = float('inf')
             elif "Temp" in Key:
                 LowThr = float('-inf')
