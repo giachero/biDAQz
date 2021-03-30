@@ -12,6 +12,7 @@ from .block import UdpStreamer
 from .block import SysId
 from .register import FpgaReg
 from functools import reduce
+from .hwmonitor import HWMonitor
 
 
 class BiDAQFPGA:
@@ -41,6 +42,8 @@ class BiDAQFPGA:
         self.FifoOutDataAdapter = ScFifo.ScFifo("fifo_adapter_data")
         self.FifoOutData = ScFifo.ScFifo("sc_fifo_data")
         self.FifoTxMac = ScFifo.ScFifo("sc_fifo_tx_eth_tse")
+
+        self.HWMonitor = HWMonitor.HWMonitor()
 
         # Low level register access
         self.LL = FpgaReg.FpgaReg(BoardList)
