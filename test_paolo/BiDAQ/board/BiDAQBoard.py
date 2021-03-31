@@ -42,6 +42,11 @@ class BiDAQBoard:
 
         self.CANBus.set_filters([{"can_id": self.ID, "can_mask": 0x1FFFFFF0, "extended": True}])
 
+#        Status, Val = self.NOP()
+#
+#        if Status:
+#            raise TimeoutError('Board at ID {} does not reply'.format(hex(self.ID)))
+
     def SendData(self, Command, Data, Channel=0, Timeout=DefaultTimeout, Queue=False):
 
         if Channel > 12 or Channel < 0:

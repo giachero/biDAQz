@@ -13,6 +13,7 @@ from .block import SysId
 from .register import FpgaReg
 from functools import reduce
 from .hwmonitor import HWMonitor
+from .portexpander import PortExpander
 
 
 class BiDAQFPGA:
@@ -44,6 +45,7 @@ class BiDAQFPGA:
         self.FifoTxMac = ScFifo.ScFifo("sc_fifo_tx_eth_tse")
 
         self.HWMonitor = HWMonitor.HWMonitor()
+        self.PortExpander = PortExpander.PortExpander()
 
         # Low level register access
         self.LL = FpgaReg.FpgaReg(BoardList)

@@ -19,11 +19,11 @@ class BiDAQ:
     """
 
     # Class constructor
-    def __init__(self, Crate, BoardList=None):
+    def __init__(self, Crate=None, BoardList=None):
         """
         BiDAQ class constructor.
 
-        :param Crate: crate number - TODO: determine automatically using I2C (when using the full backplane)
+        :param Crate: crate number, if None, then it is read automatically using the I2C port expander
         :type Crate: int
         :param BoardList: list of connected boards, if None, then the class will try to determine it automatically,
             using FPGA SysID register and querying boards with NOPs commands
@@ -37,12 +37,25 @@ class BiDAQ:
         # Retrieve the list
         self.BoardList = self.FPGA.BoardList
 
+        if Crate is None:
+            self.Crate = self.FPGA.PortExpander.GetCrateId()
+        else:
+            self.Crate = Crate
+
         # Scan the boards and check if they reply to a NOP command
-        self.Board = list()
+        self.Board, self.BoardList = self.InitBoards()
+
+    def InitBoards(self):
+
+        Board = list()
+        BoardList = self.BoardList.copy()
         for i in self.BoardList:
-            self.Board.append(BiDAQBoard.BiDAQBoard(Crate, i))
-            if self.Board[-1].NOP()[0] < 0:
-                self.Board.pop()
+            Board.append(BiDAQBoard.BiDAQBoard(self.Crate, i))
+            if Board[-1].NOP()[0] < 0:
+                Board.pop()
+                BoardList.remove(i)
+        self.BoardList = BoardList
+        return Board, BoardList
 
     def FindBoardIdx(self, Brd):
         """
