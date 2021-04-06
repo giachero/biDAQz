@@ -12,8 +12,6 @@ from .block import UdpStreamer
 from .block import SysId
 from .register import FpgaReg
 from functools import reduce
-from .hwmonitor import HWMonitor
-from .portexpander import PortExpander
 
 
 class BiDAQFPGA:
@@ -44,13 +42,11 @@ class BiDAQFPGA:
         self.FifoOutData = ScFifo.ScFifo("sc_fifo_data")
         self.FifoTxMac = ScFifo.ScFifo("sc_fifo_tx_eth_tse")
 
-        self.HWMonitor = HWMonitor.HWMonitor()
-        self.PortExpander = PortExpander.PortExpander()
-
         # Low level register access
         self.LL = FpgaReg.FpgaReg(BoardList)
 
     def __merge(self, a, b, path=None):
+
         if path is None:
             path = []
         for key in b:
@@ -65,7 +61,39 @@ class BiDAQFPGA:
                 a[key] = b[key]
         return a
 
+    def InitRtpSourceIds(self, Prefix, Crate, Half):
+
+        for Brd in self.BoardList:
+            Source = ((Prefix << 12) & 0xFFFFF000) | ((Crate << 8) & 0xF00) | (((Brd + 8*Half) << 4) & 0xF0)
+            self.DataPacketizer.SetRTPSource(Source, Brd)
+
+    def SetClockGeneratorMasterOrSlave(self, Master):
+
+        if Master:
+            MasterSetting = 1
+            ClkSource = 0    # Clock source internal
+            ClkOutEna = 1
+            ClkInEna = 0
+        else:
+            MasterSetting = 0
+            ClkSource = 1
+            ClkOutEna = 0
+            ClkInEna = 1
+
+        self.GeneralEnable.SetMaster(MasterSetting)
+        self.ClockRefGenerator.SetExternalInputEnable(ClkInEna)
+        self.ClockRefGenerator.SetExternalOutputEnable(ClkOutEna)
+        self.ClockRefGenerator.SetSource(ClkSource)
+
+    def SetSlave(self):
+        self.SetClockGeneratorMasterOrSlave(False)
+
+    def SetMaster(self):
+        self.SetClockGeneratorMasterOrSlave(True)
+
+
     def GetMonitorRegisters(self):
+
         DP = self.DataPacketizer.GetMonitorRegisters()
         SG = self.SyncGenerator.GetMonitorRegisters()
         US = self.UdpStreamer.GetMonitorRegisters()

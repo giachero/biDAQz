@@ -9,10 +9,10 @@
           </mappings>
         </serverdata>
       </paths>
-      <paths name="root@pcelet26.mib.infn.it:22">
+      <paths name="root@192.168.1.11:22">
         <serverdata>
           <mappings>
-            <mapping deploy="/daq/daq_class" local="$PROJECT_DIR$" />
+            <mapping deploy="/daq/daq_class/" local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>

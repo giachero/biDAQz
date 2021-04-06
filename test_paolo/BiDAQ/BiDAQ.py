@@ -2,6 +2,8 @@
 
 from board import BiDAQBoard
 from fpga import BiDAQFPGA
+from backplane import BiDAQBackplane
+
 import warnings
 import logging
 import sys
@@ -19,7 +21,7 @@ class BiDAQ:
     """
 
     # Class constructor
-    def __init__(self, Crate=None, BoardList=None):
+    def __init__(self, Crate=None, Half=None, BoardList=None):
         """
         BiDAQ class constructor.
 
@@ -37,23 +39,33 @@ class BiDAQ:
         # Retrieve the list
         self.BoardList = self.FPGA.BoardList
 
+        # Init the backplane class
+        self.Backplane = BiDAQBackplane.BiDAQBackplane()
+
         if Crate is None:
-            self.Crate = self.FPGA.PortExpander.GetCrateId()
+            self.Crate = self.Backplane.Crate
         else:
             self.Crate = Crate
 
+        if Half is None:
+            self.Half = self.Backplane.Half
+        else:
+            self.Half = Half
+
         # Scan the boards and check if they reply to a NOP command
         self.Board, self.BoardList = self.InitBoards()
+
+        self.FPGA.InitRtpSourceIds(0xB1DAC, self.Crate, self.Half)
 
     def InitBoards(self):
 
         Board = list()
         BoardList = self.BoardList.copy()
-        for i in self.BoardList:
-            Board.append(BiDAQBoard.BiDAQBoard(self.Crate, i))
+        for CurrentBoard in self.BoardList:
+            Board.append(BiDAQBoard.BiDAQBoard(self.Crate, CurrentBoard + 8*self.Half))
             if Board[-1].NOP()[0] < 0:
                 Board.pop()
-                BoardList.remove(i)
+                BoardList.remove(CurrentBoard)
         self.BoardList = BoardList
         return Board, BoardList
 
@@ -336,10 +348,13 @@ def main():
 
     Parser.set_usage("BiDAQ.py [options] start|stop")
 
-    Parser.add_option("-c", "--crate", dest="Crate", type=int, default=0,
+    Parser.add_option("-c", "--crate", dest="Crate", type=int, default=None,
                       help="select crate number", metavar="CRATE")
 
-    Parser.add_option("-b", "--board-list", dest="Boards", type="string", default=[0, 1],
+    Parser.add_option("-H", "--half", dest="Half", type=int, default=None,
+                      help="select crate half", metavar="HALF")
+
+    Parser.add_option("-b", "--board-list", dest="Boards", type="string", default=None,
                       help="select list of boards (comma separated)", metavar="LIST", action='callback',
                       callback=__BoardsOptionsCallback)
 
@@ -384,6 +399,11 @@ def main():
 
     Parser.set_defaults(DropTimestamp=True)
 
+    Parser.add_option("-m", "--master", dest="Master", action='store_true',
+                      help="set fpga as master")
+
+    Parser.set_defaults(Master=False)
+
     Parser.add_option("-S", "--samples-per-packet", dest="SamplesPerPacket", type=int, default=180,
                       help="select number of samples per packet", metavar="SAMPLES")
 
@@ -413,7 +433,7 @@ def main():
     logging.basicConfig(stream=sys.stderr, level=LogLevel)
 
     # Init class
-    Daq = BiDAQ(Options.Crate, Options.Boards)
+    Daq = BiDAQ(Options.Crate, Options.Half, Options.Boards)
 
     Status = -1
 
@@ -428,11 +448,17 @@ def main():
 
     if str.lower(Args[0]) == 'start':
 
+        BrdList = Daq.BoardList
         # Build channel config list according to input options. Apply the same settings to all channels
         CfgList = [
-            [Options.Boards, [0], Options.FilterGrounded, Options.FilterEnable, Options.FilterFreq]
+            [[x+8*Daq.Half for x in BrdList], [0], Options.FilterGrounded, Options.FilterEnable, Options.FilterFreq]
         ]
         Daq.SetChannelConfigList(CfgList)
+
+        if Options.Master:
+            Daq.FPGA.SetMaster()
+        else:
+            Daq.FPGA.SetSlave()
 
         logging.info("Starting DAQ...")
         Status = Daq.StartDaq(Options.IpAdrDst, Options.UdpPortDst, Options.DaqFreq,

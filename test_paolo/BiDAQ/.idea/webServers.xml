@@ -2,8 +2,8 @@
 <project version="4">
   <component name="WebServers">
     <option name="servers">
-      <webServer id="5072ce27-093d-4ca6-832f-9348a8cbddf1" name="root@pcelet26.mib.infn.it:22" url="http:///">
-        <fileTransfer accessType="SFTP" host="192.168.1.10" port="22" sshConfigId="991189f3-b1b1-4224-82da-795f36fd90fd" sshConfig="root@192.168.1.10:22 password" />
+      <webServer id="5072ce27-093d-4ca6-832f-9348a8cbddf1" name="root@192.168.1.11:22" url="http:///">
+        <fileTransfer accessType="SFTP" host="192.168.1.11" port="22" sshConfigId="ebf0ac26-7289-4a9d-8d48-2cc58ea04a9d" sshConfig="root@192.168.1.11:22 password" />
       </webServer>
     </option>
   </component>
