@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 from ..register import FpgaReg
+from ..block import SysId
 
 
 class SyncGenerator:
@@ -15,6 +16,7 @@ class SyncGenerator:
         # Initialize register management class
         self.FpgaReg = FpgaReg.FpgaReg(BoardList)
         self.BoardList = BoardList
+        self.SysId = SysId.SysId()
 
     def SetReset(self, Reset, Board=None):
         self.FpgaReg.SetBoardSetting("BiDAQ_sync_generator_", "RESET", Reset, Board)
@@ -53,12 +55,12 @@ class SyncGenerator:
         else:
             Enable = self.GetEnable(Board)
         if not Enable:
-            self.FpgaReg.SetBoardSetting("BiDAQ_sync_generator_", "DIVIDER", Divider - 1, Board)
+            self.FpgaReg.SetBoardSetting("BiDAQ_sync_generator_", "DIVIDER", int(Divider/2) - 1, Board)
         else:
             raise Exception("Divider can't be set while SyncGenerator is running")
 
     def GetDivider(self, Board):
-        return self.FpgaReg.GetBoardSetting("BiDAQ_sync_generator_", "DIVIDER", Board) + 1
+        return (self.FpgaReg.GetBoardSetting("BiDAQ_sync_generator_", "DIVIDER", Board) + 1) * 2
 
     def SetPulseWidth(self, PulseWidth, Board=None):
         self.FpgaReg.SetBoardSetting("BiDAQ_sync_generator_", "PULSE_WIDTH", PulseWidth, Board)

@@ -71,12 +71,12 @@ class BiDAQFPGA:
 
         if Master:
             MasterSetting = 1
-            ClkSource = 0    # Clock source internal
+            ClkSource = 0    # Clock source slow clock
             ClkOutEna = 1
             ClkInEna = 0
         else:
             MasterSetting = 0
-            ClkSource = 1
+            ClkSource = 0
             ClkOutEna = 0
             ClkInEna = 1
 
