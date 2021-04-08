@@ -44,9 +44,9 @@ class ClockRefGenerator:
     def SetDivider(self, Divider):
         Enable = self.GetEnable()
         if not Enable:
-            self.FpgaReg.WriteBits("BiDAQ_sync_ref_generator", "DIVIDER", Divider - 1)
+            self.FpgaReg.WriteBits("BiDAQ_sync_ref_generator", "DIVIDER", int(Divider/2) - 1)
         else:
             raise Exception("Divider can't be set while ClockRef is enabled")
 
     def GetDivider(self):
-        return self.FpgaReg.ReadBits("BiDAQ_sync_ref_generator", "DIVIDER") + 1
+        return (self.FpgaReg.ReadBits("BiDAQ_sync_ref_generator", "DIVIDER") + 1) * 2

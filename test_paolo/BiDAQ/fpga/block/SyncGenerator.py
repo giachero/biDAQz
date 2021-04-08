@@ -55,12 +55,12 @@ class SyncGenerator:
         else:
             Enable = self.GetEnable(Board)
         if not Enable:
-            self.FpgaReg.SetBoardSetting("BiDAQ_sync_generator_", "DIVIDER", int(Divider/2) - 1, Board)
+            self.FpgaReg.SetBoardSetting("BiDAQ_sync_generator_", "DIVIDER", Divider - 1, Board)
         else:
             raise Exception("Divider can't be set while SyncGenerator is running")
 
     def GetDivider(self, Board):
-        return (self.FpgaReg.GetBoardSetting("BiDAQ_sync_generator_", "DIVIDER", Board) + 1) * 2
+        return self.FpgaReg.GetBoardSetting("BiDAQ_sync_generator_", "DIVIDER", Board) + 1
 
     def SetPulseWidth(self, PulseWidth, Board=None):
         self.FpgaReg.SetBoardSetting("BiDAQ_sync_generator_", "PULSE_WIDTH", PulseWidth, Board)
