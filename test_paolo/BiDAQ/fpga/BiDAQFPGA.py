@@ -10,6 +10,7 @@ from .block import ClockRefGenerator
 from .block import TxMac
 from .block import UdpStreamer
 from .block import SysId
+from .block import HpsClockManager
 from .register import FpgaReg
 from functools import reduce
 
@@ -37,6 +38,7 @@ class BiDAQFPGA:
         self.GeneralEnable = GeneralEnable.GeneralEnable()
         self.TxMac = TxMac.TxMac()
         self.HpsToTxMac = HpsToTxMac.HpsToTxMac()
+        self.HpsClockManager = HpsClockManager.HpsClockManager()
         self.FifoHpsMac = ScFifo.ScFifo("sc_fifo_hps_mac")
         self.FifoOutDataAdapter = ScFifo.ScFifo("fifo_adapter_data")
         self.FifoOutData = ScFifo.ScFifo("sc_fifo_data")
