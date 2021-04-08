@@ -22,7 +22,7 @@ class FpgaReg:
 
         # FPGA memory specs (BaseAdr is defined by Altera, MemLen by the last address used in the application)
         BaseAdr = 0xC0000000
-        MemLen = 0x00041000
+        MemLen = 0x40000000
         # Initialize DevMem class
         self.FPGAMem = DevMem.DevMem(BaseAdr, MemLen)
 
