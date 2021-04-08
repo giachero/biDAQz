@@ -24,28 +24,28 @@ class ScFifo:
         return self.GetCutThroughThr() > 0
 
     def SetCutThroughThr(self, Thr):
-        self.FpgaReg.WriteBits(self.RegName, "cut_through_threshold", Thr)
+        self.FpgaReg.FpgaMem.WriteBits(self.RegName, "cut_through_threshold", Thr)
 
     def GetCutThroughThr(self):
-        return self.FpgaReg.ReadBits(self.RegName, "cut_through_threshold")
+        return self.FpgaReg.FpgaMem.ReadBits(self.RegName, "cut_through_threshold")
 
     def GetFillLevel(self):
-        return self.FpgaReg.ReadBits(self.RegName, "fill_level")
+        return self.FpgaReg.FpgaMem.ReadBits(self.RegName, "fill_level")
 
     def SetAlmostFullThr(self, Thr):
-        self.FpgaReg.WriteBits(self.RegName, "almost_full_threshold", Thr)
+        self.FpgaReg.FpgaMem.WriteBits(self.RegName, "almost_full_threshold", Thr)
 
     def GetAlmostFullThr(self):
-        return self.FpgaReg.ReadBits(self.RegName, "almost_full_threshold")
+        return self.FpgaReg.FpgaMem.ReadBits(self.RegName, "almost_full_threshold")
 
     def SetAlmostEmptyThr(self, Thr):
-        self.FpgaReg.WriteBits(self.RegName, "almost_empty_threshold", Thr)
+        self.FpgaReg.FpgaMem.WriteBits(self.RegName, "almost_empty_threshold", Thr)
 
     def GetAlmostEmptyThr(self):
-        return self.FpgaReg.ReadBits(self.RegName, "almost_empty_threshold")
+        return self.FpgaReg.FpgaMem.ReadBits(self.RegName, "almost_empty_threshold")
 
     def SetDropOnError(self, Value):
-        self.FpgaReg.WriteBits(self.RegName, "drop_on_error", Value)
+        self.FpgaReg.FpgaMem.WriteBits(self.RegName, "drop_on_error", Value)
 
     def GetDropOnError(self):
-        return self.FpgaReg.ReadBits(self.RegName, "drop_on_error")
+        return self.FpgaReg.FpgaMem.ReadBits(self.RegName, "drop_on_error")

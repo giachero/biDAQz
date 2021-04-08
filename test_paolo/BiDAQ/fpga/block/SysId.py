@@ -12,10 +12,10 @@ class SysId:
         self.FpgaReg = FpgaReg.FpgaReg()
 
     def GetSysId(self):
-        return self.FpgaReg.ReadBits("sys_id", "SYSTEM_ID")
+        return self.FpgaReg.FpgaMem.ReadBits("sys_id", "SYSTEM_ID")
 
     def GetSysIdTimestamp(self):
-        return self.FpgaReg.ReadBits("sys_id", "SYSTEM_ID_TIMESTAMP")
+        return self.FpgaReg.FpgaMem.ReadBits("sys_id", "SYSTEM_ID_TIMESTAMP")
 
     def GetBoardNumber(self):
         return (self.GetSysId() >> 8) & 0xF

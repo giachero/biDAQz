@@ -62,24 +62,24 @@ class UdpStreamer:
         self.FpgaReg = FpgaReg.FpgaReg()
 
     def SetUdpStreamEnable(self, Enable):
-        self.FpgaReg.WriteBits("udp_payload_inserter", "EN", Enable)
+        self.FpgaReg.FpgaMem.WriteBits("udp_payload_inserter", "EN", Enable)
 
     def GetUdpStreamEnable(self):
-        return self.FpgaReg.ReadBits("udp_payload_inserter", "EN")
+        return self.FpgaReg.FpgaMem.ReadBits("udp_payload_inserter", "EN")
 
     def GetUdpStreamRunning(self):
-        return self.FpgaReg.ReadBits("udp_payload_inserter", "RUN")
+        return self.FpgaReg.FpgaMem.ReadBits("udp_payload_inserter", "RUN")
 
     def GetUdpStreamError(self):
-        return self.FpgaReg.ReadBits("udp_payload_inserter", "ERR")
+        return self.FpgaReg.FpgaMem.ReadBits("udp_payload_inserter", "ERR")
 
     def SetUdpStreamDestMac(self, MAC):
-        self.FpgaReg.WriteBits("udp_payload_inserter", "DEST_MAC_ADDRESS_LSB", MAC & 0xFFFF)
-        self.FpgaReg.WriteBits("udp_payload_inserter", "DEST_MAC_ADDRESS_MSB", (MAC >> 16) & 0xFFFFFFFF)
+        self.FpgaReg.FpgaMem.WriteBits("udp_payload_inserter", "DEST_MAC_ADDRESS_LSB", MAC & 0xFFFF)
+        self.FpgaReg.FpgaMem.WriteBits("udp_payload_inserter", "DEST_MAC_ADDRESS_MSB", (MAC >> 16) & 0xFFFFFFFF)
 
     def GetUdpStreamDestMac(self):
-        MAC_LSB = self.FpgaReg.ReadBits("udp_payload_inserter", "DEST_MAC_ADDRESS_LSB")
-        MAC_MSB = self.FpgaReg.ReadBits("udp_payload_inserter", "DEST_MAC_ADDRESS_MSB")
+        MAC_LSB = self.FpgaReg.FpgaMem.ReadBits("udp_payload_inserter", "DEST_MAC_ADDRESS_LSB")
+        MAC_MSB = self.FpgaReg.FpgaMem.ReadBits("udp_payload_inserter", "DEST_MAC_ADDRESS_MSB")
         return MAC_LSB | (MAC_MSB << 16)
 
     def AutoSetUdpStreamDestMac(self):
@@ -98,25 +98,25 @@ class UdpStreamer:
         return 0
 
     def SetUdpStreamSourMac(self, MAC):
-        self.FpgaReg.WriteBits("udp_payload_inserter", "SOUR_MAC_ADDRESS_LSB", MAC & 0xFFFF)
-        self.FpgaReg.WriteBits("udp_payload_inserter", "SOUR_MAC_ADDRESS_MSB", (MAC >> 16) & 0xFFFFFFFF)
+        self.FpgaReg.FpgaMem.WriteBits("udp_payload_inserter", "SOUR_MAC_ADDRESS_LSB", MAC & 0xFFFF)
+        self.FpgaReg.FpgaMem.WriteBits("udp_payload_inserter", "SOUR_MAC_ADDRESS_MSB", (MAC >> 16) & 0xFFFFFFFF)
 
     def GetUdpStreamSourMac(self):
-        MAC_LSB = self.FpgaReg.ReadBits("udp_payload_inserter", "SOUR_MAC_ADDRESS_LSB")
-        MAC_MSB = self.FpgaReg.ReadBits("udp_payload_inserter", "SOUR_MAC_ADDRESS_MSB")
+        MAC_LSB = self.FpgaReg.FpgaMem.ReadBits("udp_payload_inserter", "SOUR_MAC_ADDRESS_LSB")
+        MAC_MSB = self.FpgaReg.FpgaMem.ReadBits("udp_payload_inserter", "SOUR_MAC_ADDRESS_MSB")
         return MAC_LSB | (MAC_MSB << 16)
 
     def SetUdpStreamDestIp(self, IP):
-        self.FpgaReg.WriteBits("udp_payload_inserter", "DEST_IP_ADDRESS", IP)
+        self.FpgaReg.FpgaMem.WriteBits("udp_payload_inserter", "DEST_IP_ADDRESS", IP)
 
     def GetUdpStreamDestIp(self):
-        return self.FpgaReg.ReadBits("udp_payload_inserter", "DEST_IP_ADDRESS")
+        return self.FpgaReg.FpgaMem.ReadBits("udp_payload_inserter", "DEST_IP_ADDRESS")
 
     def SetUdpStreamSourIp(self, IP):
-        self.FpgaReg.WriteBits("udp_payload_inserter", "SOUR_IP_ADDRESS", IP)
+        self.FpgaReg.FpgaMem.WriteBits("udp_payload_inserter", "SOUR_IP_ADDRESS", IP)
 
     def GetUdpStreamSourIp(self):
-        return self.FpgaReg.ReadBits("udp_payload_inserter", "SOUR_IP_ADDRESS")
+        return self.FpgaReg.FpgaMem.ReadBits("udp_payload_inserter", "SOUR_IP_ADDRESS")
 
     def AutoSetUdpStreamSourAddr(self):
 
@@ -144,19 +144,19 @@ class UdpStreamer:
         self.SetUdpStreamSourIp(ipAdr)
 
     def SetUdpStreamDestPort(self, Port):
-        self.FpgaReg.WriteBits("udp_payload_inserter", "DEST_UDP_PORT", Port)
+        self.FpgaReg.FpgaMem.WriteBits("udp_payload_inserter", "DEST_UDP_PORT", Port)
 
     def GetUdpStreamDestPort(self):
-        return self.FpgaReg.ReadBits("udp_payload_inserter", "DEST_UDP_PORT")
+        return self.FpgaReg.FpgaMem.ReadBits("udp_payload_inserter", "DEST_UDP_PORT")
 
     def SetUdpStreamSourPort(self, Port):
-        self.FpgaReg.WriteBits("udp_payload_inserter", "SOUR_UDP_PORT", Port)
+        self.FpgaReg.FpgaMem.WriteBits("udp_payload_inserter", "SOUR_UDP_PORT", Port)
 
     def GetUdpStreamSourPort(self):
-        return self.FpgaReg.ReadBits("udp_payload_inserter", "SOUR_UDP_PORT")
+        return self.FpgaReg.FpgaMem.ReadBits("udp_payload_inserter", "SOUR_UDP_PORT")
 
     def GetUdpStreamPacketCount(self):
-        return self.FpgaReg.ReadBits("udp_payload_inserter", "PACKET_COUNT")
+        return self.FpgaReg.FpgaMem.ReadBits("udp_payload_inserter", "PACKET_COUNT")
 
     def GetMonitorRegisters(self):
         RetDict = dict()

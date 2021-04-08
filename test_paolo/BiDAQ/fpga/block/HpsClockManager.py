@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-from ..register import FpgaReg
+from ..register import HpsReg
 
 
 class HpsClockManager:
@@ -8,20 +8,20 @@ class HpsClockManager:
     # Class constructor
     def __init__(self):
         # Initialize register management class
-        self.FpgaReg = FpgaReg.FpgaReg()
+        self.HpsReg = HpsReg.HpsReg()
         self.OscillatorFrequency = 50e6
 
     def SetUserClockDivider(self, Divider):
-        self.FpgaReg.WriteBits("hps_pll_user1_clock", "DIVIDER", Divider - 1)
+        self.HpsReg.HpsMem.WriteBits("hps_pll_user1_clock", "DIVIDER", Divider - 1)
 
     def GetUserClockDivider(self):
-        return self.FpgaReg.ReadBits("hps_pll_user1_clock", "DIVIDER") + 1
+        return self.HpsReg.HpsMem.ReadBits("hps_pll_user1_clock", "DIVIDER") + 1
 
     def GetVcoNumerator(self):
-        return self.FpgaReg.ReadBits("hps_pll_peripheral_vco", "NUMERATOR") + 1
+        return self.HpsReg.HpsMem.ReadBits("hps_pll_peripheral_vco", "NUMERATOR") + 1
 
     def GetVcoDenominator(self):
-        return self.FpgaReg.ReadBits("hps_pll_peripheral_vco", "DENOMINATOR") + 1
+        return self.HpsReg.HpsMem.ReadBits("hps_pll_peripheral_vco", "DENOMINATOR") + 1
 
     def GetUserClockFrequency(self):
         return self.OscillatorFrequency * self.GetVcoNumerator() / self.GetVcoDenominator() / self.GetUserClockDivider()

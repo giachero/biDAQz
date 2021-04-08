@@ -13,100 +13,100 @@ class TxMac:
         self.FpgaReg = FpgaReg.FpgaReg()
 
     def SetTxEnable(self, Enable):
-        self.FpgaReg.WriteBits("eth_mac", "TX_ENA", Enable)
+        self.FpgaReg.FpgaMem.WriteBits("eth_mac", "TX_ENA", Enable)
 
     def GetTxEnable(self):
-        return self.FpgaReg.ReadBits("eth_mac", "TX_ENA")
+        return self.FpgaReg.FpgaMem.ReadBits("eth_mac", "TX_ENA")
 
     def SetReset(self, Reset):
-        self.FpgaReg.WriteBits("eth_mac", "SW_RESET", Reset)
+        self.FpgaReg.FpgaMem.WriteBits("eth_mac", "SW_RESET", Reset)
 
     def GetReset(self):
-        return self.FpgaReg.ReadBits("eth_mac", "SW_RESET")
+        return self.FpgaReg.FpgaMem.ReadBits("eth_mac", "SW_RESET")
 
     def SetMac(self, MAC):
-        self.FpgaReg.WriteBits("eth_mac", "MAC_1", MAC & 0xFFFF)
-        self.FpgaReg.WriteBits("eth_mac", "MAC_0", (MAC >> 16) & 0xFFFFFFFF)
+        self.FpgaReg.FpgaMem.WriteBits("eth_mac", "MAC_1", MAC & 0xFFFF)
+        self.FpgaReg.FpgaMem.WriteBits("eth_mac", "MAC_0", (MAC >> 16) & 0xFFFFFFFF)
 
     def GetMac(self):
-        MAC_LSB = self.FpgaReg.ReadBits("eth_mac", "MAC_1")
-        MAC_MSB = self.FpgaReg.ReadBits("eth_mac", "MAC_0")
+        MAC_LSB = self.FpgaReg.FpgaMem.ReadBits("eth_mac", "MAC_1")
+        MAC_MSB = self.FpgaReg.FpgaMem.ReadBits("eth_mac", "MAC_0")
         return MAC_LSB | (MAC_MSB << 16)
 
     def SetPauseQuanta(self, Value):
-        self.FpgaReg.WriteBits("eth_mac", "PAUSE_QUANTA", Value)
+        self.FpgaReg.FpgaMem.WriteBits("eth_mac", "PAUSE_QUANTA", Value)
 
     def GetPauseQuanta(self):
-        return self.FpgaReg.ReadBits("eth_mac", "PAUSE_QUANTA")
+        return self.FpgaReg.FpgaMem.ReadBits("eth_mac", "PAUSE_QUANTA")
 
     def SetRxSectionEmpty(self, Value):
-        self.FpgaReg.WriteBits("eth_mac", "RX_SECTION_EMPTY", Value)
+        self.FpgaReg.FpgaMem.WriteBits("eth_mac", "RX_SECTION_EMPTY", Value)
 
     def GetRxSectionEmpty(self):
-        return self.FpgaReg.ReadBits("eth_mac", "RX_SECTION_EMPTY")
+        return self.FpgaReg.FpgaMem.ReadBits("eth_mac", "RX_SECTION_EMPTY")
 
     def SetRxSectionFull(self, Value):
-        self.FpgaReg.WriteBits("eth_mac", "RX_SECTION_FULL", Value)
+        self.FpgaReg.FpgaMem.WriteBits("eth_mac", "RX_SECTION_FULL", Value)
 
     def GetRxSectionFull(self):
-        return self.FpgaReg.ReadBits("eth_mac", "RX_SECTION_FULL")
+        return self.FpgaReg.FpgaMem.ReadBits("eth_mac", "RX_SECTION_FULL")
 
     def SetTxSectionEmpty(self, Value):
-        self.FpgaReg.WriteBits("eth_mac", "TX_SECTION_EMPTY", Value)
+        self.FpgaReg.FpgaMem.WriteBits("eth_mac", "TX_SECTION_EMPTY", Value)
 
     def GetTxSectionEmpty(self):
-        return self.FpgaReg.ReadBits("eth_mac", "TX_SECTION_EMPTY")
+        return self.FpgaReg.FpgaMem.ReadBits("eth_mac", "TX_SECTION_EMPTY")
 
     def SetTxSectionFull(self, Value):
-        self.FpgaReg.WriteBits("eth_mac", "TX_SECTION_FULL", Value)
+        self.FpgaReg.FpgaMem.WriteBits("eth_mac", "TX_SECTION_FULL", Value)
 
     def GetTxSectionFull(self):
-        return self.FpgaReg.ReadBits("eth_mac", "TX_SECTION_FULL")
+        return self.FpgaReg.FpgaMem.ReadBits("eth_mac", "TX_SECTION_FULL")
 
     def SetRxAlmostEmpty(self, Value):
-        self.FpgaReg.WriteBits("eth_mac", "RX_ALMOST_EMPTY", Value)
+        self.FpgaReg.FpgaMem.WriteBits("eth_mac", "RX_ALMOST_EMPTY", Value)
 
     def GetRxAlmostEmpty(self):
-        return self.FpgaReg.ReadBits("eth_mac", "RX_ALMOST_EMPTY")
+        return self.FpgaReg.FpgaMem.ReadBits("eth_mac", "RX_ALMOST_EMPTY")
 
     def SetRxAlmostFull(self, Value):
-        self.FpgaReg.WriteBits("eth_mac", "RX_ALMOST_FULL", Value)
+        self.FpgaReg.FpgaMem.WriteBits("eth_mac", "RX_ALMOST_FULL", Value)
 
     def GetRxAlmostFull(self):
-        return self.FpgaReg.ReadBits("eth_mac", "RX_ALMOST_FULL")
+        return self.FpgaReg.FpgaMem.ReadBits("eth_mac", "RX_ALMOST_FULL")
 
     def SetTxAlmostEmpty(self, Value):
-        self.FpgaReg.WriteBits("eth_mac", "TX_ALMOST_EMPTY", Value)
+        self.FpgaReg.FpgaMem.WriteBits("eth_mac", "TX_ALMOST_EMPTY", Value)
 
     def GetTxAlmostEmpty(self):
-        return self.FpgaReg.ReadBits("eth_mac", "TX_ALMOST_EMPTY")
+        return self.FpgaReg.FpgaMem.ReadBits("eth_mac", "TX_ALMOST_EMPTY")
 
     def SetTxAlmostFull(self, Value):
-        self.FpgaReg.WriteBits("eth_mac", "TX_ALMOST_FULL", Value)
+        self.FpgaReg.FpgaMem.WriteBits("eth_mac", "TX_ALMOST_FULL", Value)
 
     def GetTxAlmostFull(self):
-        return self.FpgaReg.ReadBits("eth_mac", "TX_ALMOST_FULL")
+        return self.FpgaReg.FpgaMem.ReadBits("eth_mac", "TX_ALMOST_FULL")
 
     def SetTxIpgLength(self, Value):
-        self.FpgaReg.WriteBits("eth_mac", "TX_Ipg_LENGTH", Value)
+        self.FpgaReg.FpgaMem.WriteBits("eth_mac", "TX_Ipg_LENGTH", Value)
 
     def GetTxIpgLength(self):
-        return self.FpgaReg.ReadBits("eth_mac", "TX_Ipg_LENGTH")
+        return self.FpgaReg.FpgaMem.ReadBits("eth_mac", "TX_Ipg_LENGTH")
 
     def SetTxShift16(self, Value):
-        self.FpgaReg.WriteBits("eth_mac", "TX_SHIFT16", Value)
+        self.FpgaReg.FpgaMem.WriteBits("eth_mac", "TX_SHIFT16", Value)
 
     def GetTxShift16(self):
-        return self.FpgaReg.ReadBits("eth_mac", "TX_SHIFT16")
+        return self.FpgaReg.FpgaMem.ReadBits("eth_mac", "TX_SHIFT16")
 
     def SetRxShift16(self, Value):
-        self.FpgaReg.WriteBits("eth_mac", "RX_SHIFT16", Value)
+        self.FpgaReg.FpgaMem.WriteBits("eth_mac", "RX_SHIFT16", Value)
 
     def GetRxShift16(self):
-        return self.FpgaReg.ReadBits("eth_mac", "RX_SHIFT16")
+        return self.FpgaReg.FpgaMem.ReadBits("eth_mac", "RX_SHIFT16")
 
     def GetStatisticsCounter(self, Name):
-        return self.FpgaReg.ReadBits("eth_mac", Name)
+        return self.FpgaReg.FpgaMem.ReadBits("eth_mac", Name)
 
     def Reset(self):
 

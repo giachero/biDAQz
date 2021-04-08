@@ -93,7 +93,6 @@ class BiDAQFPGA:
     def SetMaster(self):
         self.SetClockGeneratorMasterOrSlave(True)
 
-
     def GetMonitorRegisters(self):
 
         DP = self.DataPacketizer.GetMonitorRegisters()
