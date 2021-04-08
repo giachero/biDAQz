@@ -4,7 +4,7 @@ class FpgaRegDict:
 
     # Dictionary creator
     @staticmethod
-    def CreateDict(BoardsList=tuple(range(0, 8))):
+    def CreateDict(BoardsList=tuple(range(8))):
         BiDAQ_control_0_bits = {
             "SPI_POL": (31, 31),
             "SPI_PHA": (30, 30),
@@ -58,7 +58,7 @@ class FpgaRegDict:
         BiDAQ_packetizer_32_bits = dict()
         BiDAQ_packetizer_48_bits = dict()
 
-        for i in range(0, 12):
+        for i in range(12):
             BiDAQ_packetizer_16_bits["BiDAQ_packetizer_{}_bits".format(16 + i)] = {
                 "FIFO_FILL_LEVEL_{}".format(i): (0, 31)}
             BiDAQ_packetizer_32_bits["BiDAQ_packetizer_{}_bits".format(32 + i)] = {
@@ -198,6 +198,13 @@ class FpgaRegDict:
 
         hps_emac_interface_splitter_0_bits = {"MAC_SPEED": (0, 1)}
 
+        hps_pll_user1_clock_divider_bits = {"DIVIDER": (0, 8)}
+        hps_pll_user1_clock_enable_bits = {"ENABLE": (7, 7)}
+
+        hps_pll_peripheral_vco_bits = {
+            "DENOMINATOR": (16, 21),
+            "NUMERATOR": (3, 15)}
+
         LocalRegDict = {
 
             # pio_led
@@ -335,6 +342,14 @@ class FpgaRegDict:
             "hps_emac_interface_splitter": {
                 "hps_emac_interface_splitter_0": (0x00033000, hps_emac_interface_splitter_0_bits)},
 
+            # hps_pll_user1_clock
+            "hps_pll_user1_clock": {
+                "hps_pll_user1_clock_divider": (0xFFD0409C-0xC0000000, hps_pll_user1_clock_divider_bits),
+                "hps_pll_user1_clock_enable":  (0xFFD040A0-0xC0000000, hps_pll_user1_clock_enable_bits)},
+
+            # hps_pll_peripheral_vco
+            "hps_pll_peripheral_vco": (0xFFD04080-0xC0000000, hps_pll_peripheral_vco_bits),
+
         }
 
         for i in BoardsList:
@@ -353,7 +368,7 @@ class FpgaRegDict:
                 "BiDAQ_packetizer_{}_4".format(i): (0x00011010 + 0x100 * i, BiDAQ_packetizer_4_bits),
                 "BiDAQ_packetizer_{}_5".format(i): (0x00011014 + 0x100 * i, BiDAQ_packetizer_5_bits)}
 
-            for j in range(0, 12):
+            for j in range(12):
                 NewDict["BiDAQ_packetizer_{}_{}".format(i, 16 + j)] = (
                     0x00011040 + 0x100 * i + 0x004 * j,
                     BiDAQ_packetizer_16_bits["BiDAQ_packetizer_{}_bits".format(16 + j)])
