@@ -370,7 +370,8 @@ class FpgaRegDict:
             LocalRegDict["BiDAQ_control_{}".format(i)] = NewDict
 
         BoardsList = list(BoardsList)
-        BoardsList.append(max(BoardsList) + 1)
+        if len(BoardsList) > 0:
+            BoardsList.append(max(BoardsList) + 1)
 
         for i in BoardsList:
 

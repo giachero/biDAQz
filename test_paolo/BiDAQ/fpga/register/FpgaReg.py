@@ -10,7 +10,7 @@ from . import Reg
 class FpgaReg:
 
     # Class constructor
-    def __init__(self, BoardList=None, Gpio=False):
+    def __init__(self, BoardList=None, Gpio=None):
 
         # Store number of boards - THIS IS NOT USED ANYMORE!
         # self.NBoards = len(BoardList)
@@ -32,12 +32,12 @@ class FpgaReg:
         # Initialize DevMem class
         self.FpgaMem = Reg.Reg(BaseAdr, MemLen, RegDictClass.CreateDict(BoardList))
 
-    def SetBoardSettingGeneric(self, RegName, BitName, Data, Board=None, Gpio=False):
+    def SetBoardSettingGeneric(self, RegName, BitName, Data, Board=None, Gpio=None):
         Ret = 0
         if Board is None:
-            IterList = self.BoardList
-            if Gpio:
-                IterList.append(max(IterList) + 1)
+            IterList = self.BoardList.copy()
+            if Gpio is not None:
+                IterList.append(Gpio)
             for i in IterList:
                 Ret = self.FpgaMem.WriteBits(RegName + str(i), BitName, Data)
                 if Ret < 0:

@@ -10,7 +10,7 @@ class BoardControl:
 
         # Default value
         if BoardList is None:
-            BoardList = list(range(0, 8))
+            BoardList = list(range(8))
 
         # Initialize register management class
         self.FpgaReg = FpgaReg.FpgaReg(BoardList)

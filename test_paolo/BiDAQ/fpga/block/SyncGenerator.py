@@ -7,7 +7,7 @@ from ..block import SysId
 class SyncGenerator:
 
     # Class constructor
-    def __init__(self, BoardList=None, Gpio=False):
+    def __init__(self, BoardList=None, Gpio=None):
 
         # Default value
         if BoardList is None:

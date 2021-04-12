@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 from .block import BoardControl
+from .block import GpioControl
 from .block import DataPacketizer
 from .block import GeneralEnable
 from .block import HpsToTxMac
@@ -24,18 +25,20 @@ class BiDAQFPGA:
         self.SysId = SysId.SysId()
         # If no list is given, use the default number of boards stored in the SysID block
         if BoardList is None:
-            BoardList = list(range(0, self.SysId.GetBoardNumber()))
+            BoardList = list(range(self.SysId.GetBoardNumber()))
 
         if self.SysId.GetFwRevision() > 5:
-            Gpio = True
+            Gpio = self.SysId.GetBoardNumber()
         else:
-            Gpio = False
+            Gpio = None
+        self.Gpio = Gpio
 
         # Store board list
         self.BoardList = BoardList
 
         # Init the classes for each FPGA block
         self.BoardControl = BoardControl.BoardControl(BoardList)
+        self.GpioControl = GpioControl.GpioControl()
         self.DataPacketizer = DataPacketizer.DataPacketizer(BoardList, Gpio)
         self.SyncGenerator = SyncGenerator.SyncGenerator(BoardList, Gpio)
         self.ClockRefGenerator = ClockRefGenerator.ClockRefGenerator()
@@ -73,6 +76,9 @@ class BiDAQFPGA:
         for Brd in self.BoardList:
             Source = ((Prefix << 12) & 0xFFFFF000) | ((Crate << 8) & 0xF00) | (((Brd + 8*Half) << 4) & 0xF0)
             self.DataPacketizer.SetRTPSource(Source, Brd)
+        if self.Gpio is not None:
+            self.DataPacketizer.SetRTPSource(((Prefix << 12) & 0xFFFFF000) | ((Crate << 8) & 0xF00)
+                                             | (((7 + 8*Half) << 4) & 0xF0), self.Gpio)
 
     def SetClockGeneratorMasterOrSlave(self, Master):
 
