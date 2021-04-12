@@ -34,3 +34,9 @@ class HpsClockManager:
             Divider = 500
         self.SetUserClockDivider(Divider)
         return self.GetUserClockFrequency()
+
+    def GetUserClockEnable(self):
+        return self.HpsReg.HpsMem.ReadBits("hps_pll_user1_clock", "ENABLE")
+
+    def SetUserClockEnable(self, Enable):
+        self.HpsReg.HpsMem.WriteBits("hps_pll_user1_clock", "ENABLE", Enable)
