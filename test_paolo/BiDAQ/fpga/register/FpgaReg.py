@@ -10,7 +10,7 @@ from . import Reg
 class FpgaReg:
 
     # Class constructor
-    def __init__(self, BoardList=None):
+    def __init__(self, BoardList=None, Gpio=False):
 
         # Store number of boards - THIS IS NOT USED ANYMORE!
         # self.NBoards = len(BoardList)
@@ -19,6 +19,9 @@ class FpgaReg:
         if BoardList is None:
             BoardList = []
         self.BoardList = BoardList
+
+        # Store GPIO
+        self.Gpio = Gpio
 
         # Initialize FpgaRegDict class
         RegDictClass = FpgaRegDict.FpgaRegDict()
@@ -29,10 +32,13 @@ class FpgaReg:
         # Initialize DevMem class
         self.FpgaMem = Reg.Reg(BaseAdr, MemLen, RegDictClass.CreateDict(BoardList))
 
-    def SetBoardSetting(self, RegName, BitName, Data, Board=None):
+    def SetBoardSettingGeneric(self, RegName, BitName, Data, Board=None, Gpio=False):
         Ret = 0
         if Board is None:
-            for i in self.BoardList:  # Old command with number of boards: # range(0, self.NBoards):
+            IterList = self.BoardList
+            if Gpio:
+                IterList.append(max(IterList) + 1)
+            for i in IterList:
                 Ret = self.FpgaMem.WriteBits(RegName + str(i), BitName, Data)
                 if Ret < 0:
                     break
@@ -41,6 +47,12 @@ class FpgaReg:
 
         if Ret < 0:
             raise Exception("SetBoardSetting error - RegName: {}, BitName: {}".format(RegName, BitName))
+
+    def SetBoardSetting(self, RegName, BitName, Data, Board=None):
+        self.SetBoardSettingGeneric(RegName, BitName, Data, Board, self.Gpio)
+
+    def SetBoardSettingNoGpio(self, RegName, BitName, Data, Board=None):
+        self.SetBoardSettingGeneric(RegName, BitName, Data, Board)
 
     def GetBoardSetting(self, RegName, BitName, Board):
         return self.FpgaMem.ReadBits(RegName + str(Board), BitName)

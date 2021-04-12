@@ -16,7 +16,7 @@ class BoardControl:
         self.FpgaReg = FpgaReg.FpgaReg(BoardList)
 
     def SetADCMode(self, Mode, Board=None):
-        self.FpgaReg.SetBoardSetting("BiDAQ_control_", "SER_PAR", Mode, Board)
+        self.FpgaReg.SetBoardSettingNoGpio("BiDAQ_control_", "SER_PAR", Mode, Board)
 
     def SetADCModeSerial(self, Board=None):
         self.SetADCMode(0, Board)
@@ -28,13 +28,13 @@ class BoardControl:
         return self.FpgaReg.GetBoardSetting("BiDAQ_control_", "SER_PAR", Board)
 
     def SetSPIClockDivider(self, Divider, Board=None):
-        self.FpgaReg.SetBoardSetting("BiDAQ_control_", "SPI_CLK_DIV", Divider, Board)
+        self.FpgaReg.SetBoardSettingNoGpio("BiDAQ_control_", "SPI_CLK_DIV", Divider, Board)
 
     def GetSPIClockDivider(self, Board):
         return self.FpgaReg.GetBoardSetting("BiDAQ_control_", "SPI_CLK_DIV", Board)
 
     def SetEnable(self, Enable, Board=None):
-        self.FpgaReg.SetBoardSetting("BiDAQ_control_", "EN", Enable, Board)
+        self.FpgaReg.SetBoardSettingNoGpio("BiDAQ_control_", "EN", Enable, Board)
 
     def GetEnable(self, Board):
         return self.FpgaReg.GetBoardSetting("BiDAQ_control_", "EN", Board)

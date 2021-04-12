@@ -6,14 +6,14 @@ from ..register import FpgaReg
 class DataPacketizer:
 
     # Class constructor
-    def __init__(self, BoardList=None):
+    def __init__(self, BoardList=None, Gpio=False):
 
         # Default value
         if BoardList is None:
             BoardList = list(range(0, 8))
 
         # Initialize register management class
-        self.FpgaReg = FpgaReg.FpgaReg(BoardList)
+        self.FpgaReg = FpgaReg.FpgaReg(BoardList, Gpio)
 
     def SetEnable(self, Enable, Board=None):
         self.FpgaReg.SetBoardSetting("BiDAQ_packetizer_", "EN", Enable, Board)

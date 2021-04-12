@@ -26,13 +26,18 @@ class BiDAQFPGA:
         if BoardList is None:
             BoardList = list(range(0, self.SysId.GetBoardNumber()))
 
+        if self.SysId.GetFwRevision() > 5:
+            Gpio = True
+        else:
+            Gpio = False
+
         # Store board list
         self.BoardList = BoardList
 
         # Init the classes for each FPGA block
         self.BoardControl = BoardControl.BoardControl(BoardList)
-        self.DataPacketizer = DataPacketizer.DataPacketizer(BoardList)
-        self.SyncGenerator = SyncGenerator.SyncGenerator(BoardList)
+        self.DataPacketizer = DataPacketizer.DataPacketizer(BoardList, Gpio)
+        self.SyncGenerator = SyncGenerator.SyncGenerator(BoardList, Gpio)
         self.ClockRefGenerator = ClockRefGenerator.ClockRefGenerator()
         self.UdpStreamer = UdpStreamer.UdpStreamer()
         self.GeneralEnable = GeneralEnable.GeneralEnable()

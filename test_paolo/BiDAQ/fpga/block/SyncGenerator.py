@@ -7,14 +7,14 @@ from ..block import SysId
 class SyncGenerator:
 
     # Class constructor
-    def __init__(self, BoardList=None):
+    def __init__(self, BoardList=None, Gpio=False):
 
         # Default value
         if BoardList is None:
             BoardList = list(range(0, 8))
 
         # Initialize register management class
-        self.FpgaReg = FpgaReg.FpgaReg(BoardList)
+        self.FpgaReg = FpgaReg.FpgaReg(BoardList, Gpio)
         self.BoardList = BoardList
         self.SysId = SysId.SysId()
 

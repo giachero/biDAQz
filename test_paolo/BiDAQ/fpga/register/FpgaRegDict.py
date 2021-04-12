@@ -24,6 +24,23 @@ class FpgaRegDict:
             "SSEL_HOLD": (16, 31),
             "RESET_HOLD": (0, 15)}
 
+        BiDAQ_gpio_control_0_bits = {
+            "ID": (8, 15),
+            "CAPTURE_ENABLE": (1, 1),
+            "ENABLE": (0, 0)}
+
+        BiDAQ_gpio_control_1_bits = {
+            "PIN_ENABLE": (0, 7)}
+
+        BiDAQ_gpio_control_2_bits = {
+            "PIN_DIRECTION": (0, 7)}
+
+        BiDAQ_gpio_control_3_bits = {
+            "PIN_OUTPUT_VALUE": (0, 7)}
+
+        BiDAQ_gpio_control_4_bits = {
+            "PIN_INPUT_VALUE": (0, 7)}
+
         pio_led_bits = {
             "LED0": (0, 0),
             "LED1": (1, 1),
@@ -198,13 +215,6 @@ class FpgaRegDict:
 
         hps_emac_interface_splitter_0_bits = {"MAC_SPEED": (0, 1)}
 
-        hps_pll_user1_clock_divider_bits = {"DIVIDER": (0, 8)}
-        hps_pll_user1_clock_enable_bits = {"ENABLE": (7, 7)}
-
-        hps_pll_peripheral_vco_bits = {
-            "DENOMINATOR": (16, 21),
-            "NUMERATOR": (3, 15)}
-
         LocalRegDict = {
 
             # pio_led
@@ -222,6 +232,14 @@ class FpgaRegDict:
             "sys_id": {
                 "sys_id_0": (0x00001010, sys_id_0_bits),
                 "sys_id_1": (0x00001014, sys_id_1_bits)},
+
+            # BiDAQ_gpio_control
+            "BiDAQ_gpio_control": {
+                "BiDAQ_gpio_control_0_bits": (0x00010800, BiDAQ_gpio_control_0_bits),
+                "BiDAQ_gpio_control_1_bits": (0x00010804, BiDAQ_gpio_control_1_bits),
+                "BiDAQ_gpio_control_2_bits": (0x00010808, BiDAQ_gpio_control_2_bits),
+                "BiDAQ_gpio_control_3_bits": (0x0001080C, BiDAQ_gpio_control_3_bits),
+                "BiDAQ_gpio_control_4_bits": (0x00010810, BiDAQ_gpio_control_4_bits)},
 
             # BiDAQ_sync_ref_generator
             "BiDAQ_sync_ref_generator": {
@@ -341,15 +359,6 @@ class FpgaRegDict:
             # hps_emac_interface_splitter
             "hps_emac_interface_splitter": {
                 "hps_emac_interface_splitter_0": (0x00033000, hps_emac_interface_splitter_0_bits)},
-
-            # hps_pll_user1_clock
-            "hps_pll_user1_clock": {
-                "hps_pll_user1_clock_divider": (0xFFD0409C-0xC0000000, hps_pll_user1_clock_divider_bits),
-                "hps_pll_user1_clock_enable":  (0xFFD040A0-0xC0000000, hps_pll_user1_clock_enable_bits)},
-
-            # hps_pll_peripheral_vco
-            "hps_pll_peripheral_vco": (0xFFD04080-0xC0000000, hps_pll_peripheral_vco_bits),
-
         }
 
         for i in BoardsList:
@@ -359,6 +368,11 @@ class FpgaRegDict:
                 "BiDAQ_control_{}_1".format(i): (0x00010004 + 0x100 * i, BiDAQ_control_1_bits),
                 "BiDAQ_control_{}_2".format(i): (0x00010008 + 0x100 * i, BiDAQ_control_2_bits)}
             LocalRegDict["BiDAQ_control_{}".format(i)] = NewDict
+
+        BoardsList = list(BoardsList)
+        BoardsList.append(max(BoardsList) + 1)
+
+        for i in BoardsList:
 
             # BiDAQ_packetizer
             NewDict = {
