@@ -384,11 +384,11 @@ class FpgaRegDict:
                     "BiDAQ_virtual_gpio_control_1_bits": (0x00014004 + 0x100 * i, BiDAQ_virtual_gpio_control_1_bits)}
                 LocalRegDict["BiDAQ_virtual_gpio_control_{}".format(i)] = NewDict
 
-        BoardsList = list(BoardsList)
-        if len(BoardsList) > 0:
-            BoardsList.append(max(BoardsList) + 1)
+        BoardsListCopy = list(BoardsList).copy()
+        if len(BoardsListCopy) > 0:
+            BoardsListCopy.append(max(BoardsListCopy) + 1)
 
-        for i in BoardsList:
+        for i in BoardsListCopy:
 
             # BiDAQ_packetizer
             NewDict = {

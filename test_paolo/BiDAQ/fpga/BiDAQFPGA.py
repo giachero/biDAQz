@@ -38,7 +38,7 @@ class BiDAQFPGA:
 
         # Init the classes for each FPGA block
         self.BoardControl = BoardControl.BoardControl(BoardList)
-        self.GpioControl = GpioControl.GpioControl()
+        self.GpioControl = GpioControl.GpioControl(BoardList)
         self.DataPacketizer = DataPacketizer.DataPacketizer(BoardList, Gpio)
         self.SyncGenerator = SyncGenerator.SyncGenerator(BoardList, Gpio)
         self.ClockRefGenerator = ClockRefGenerator.ClockRefGenerator()

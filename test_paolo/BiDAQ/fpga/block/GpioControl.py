@@ -6,10 +6,17 @@ from ..register import FpgaReg
 class GpioControl:
 
     # Class constructor
-    def __init__(self):
+    def __init__(self, BoardList=None):
+
+        # Default value
+        if BoardList is None:
+            BoardList = list(range(8))
 
         # Initialize register management class
-        self.FpgaReg = FpgaReg.FpgaReg()
+        self.FpgaReg = FpgaReg.FpgaReg(BoardList)
+        self.BoardList = BoardList
+
+        self.FpgaReg.BoardList.pop(0)
 
     def SetEnable(self, Enable):
         self.FpgaReg.FpgaMem.WriteBits("BiDAQ_gpio_control", "ENABLE", Enable)
@@ -97,3 +104,15 @@ class GpioControl:
 
     def GetPinInputValue(self, Pin):
         return (self.GetPortInputValue() >> Pin) & 1
+
+    def SetVirtualGpioEnable(self, Enable, Channel=None):
+        self.FpgaReg.SetBoardSetting("BiDAQ_virtual_gpio_control_", "ENABLE", Enable, Channel)
+
+    def GetVirtualGpioEnable(self, Channel):
+        return self.FpgaReg.GetBoardSetting("BiDAQ_virtual_gpio_control_", "ENABLE", Channel)
+
+    def SetVirtualGpioValue(self, Value, Channel=None):
+        self.FpgaReg.SetBoardSetting("BiDAQ_virtual_gpio_control_", "VALUE", Value, Channel)
+
+    def GetVirtualGpioValue(self, Channel):
+        return self.FpgaReg.GetBoardSetting("BiDAQ_virtual_gpio_control_", "VALUE", Channel)
