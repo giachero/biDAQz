@@ -78,7 +78,7 @@ class BiDAQFPGA:
             self.DataPacketizer.SetRTPSource(Source, Brd)
         if self.Gpio is not None:
             self.DataPacketizer.SetRTPSource(((Prefix << 12) & 0xFFFFF000) | ((Crate << 8) & 0xF00)
-                                             | (((7 + 8*Half) << 4) & 0xF0), self.Gpio)
+                                             | (((8*Half) << 4) & 0xF0) | 0xF, self.Gpio)
 
     def SetClockGeneratorMasterOrSlave(self, Master):
 

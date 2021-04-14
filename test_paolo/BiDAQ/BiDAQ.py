@@ -185,11 +185,14 @@ class BiDAQ:
         self.FPGA.SyncGenerator.SetDivider(SyncFreqDiv)
         log.debug("FPGA.SetDivider - SyncFreq: {}, SyncFreqDiv: {}".format(SyncFreq / 2, SyncFreqDiv))
 
+        if self.FPGA.Gpio is not None:
+            self.FPGA.SyncGenerator.SetDivider(SyncFreqDiv * 2, self.FPGA.Gpio)
+
         return Status, SyncFreq, AdcFreq
 
     # Start DAQ
     def StartDaq(self, IpAdrDst, UdpPortDst, Frequency, SamplesPerPacket=180, AdcParallelReadout=True,
-                 DropTimestamp=True, RTPPayloadType=20):
+                 DropTimestamp=True, RTPPayloadType=20, Gpio=False):
         """
         Start the DAQ.
 
@@ -207,6 +210,8 @@ class BiDAQ:
         :type DropTimestamp: bool
         :param RTPPayloadType: set RTP payload type header field.
         :type RTPPayloadType: int
+        :param Gpio: enable GPIO capture stream
+        :type Gpio: bool
         :return: status (a negative value means error).
         :rtype: int
         """
@@ -224,7 +229,7 @@ class BiDAQ:
             log.warning("DAQ freq is too high")
             return -1
 
-        for Brd in range(0, len(self.Board)):
+        for Brd in range(len(self.Board)):
             Status, Value = self.Board[Brd].WriteADCMode(AdcParallelReadout + 1)
             if Status < 0:
                 log.warning("Warning. WriteADCMode - Brd: {}, Status: {}, Value: {}".format(Brd, Status, Value))
@@ -255,6 +260,10 @@ class BiDAQ:
         self.FPGA.DataPacketizer.SetPayloadHeader(self.FPGA.SyncGenerator.GetDivider(1) + 1)
         self.FPGA.DataPacketizer.SetEnable(1)
 
+        if Gpio:
+            self.FPGA.GpioControl.SetEnable(1)
+            self.FPGA.GpioControl.SetCaptureEnable(1)
+
         # General enable (this is obsolete)
         self.FPGA.GeneralEnable.SetEnable(1)
 
@@ -283,6 +292,8 @@ class BiDAQ:
         self.FPGA.GeneralEnable.SetEnable(0)
         self.FPGA.BoardControl.SetEnable(0)
         self.FPGA.DataPacketizer.SetEnable(0)
+        if self.FPGA.Gpio is not None:
+            self.FPGA.GpioControl.SetEnable(0)
         Status = 0
 
         for Brd in range(0, len(self.Board)):
@@ -404,6 +415,11 @@ def main():
 
     Parser.set_defaults(Master=False)
 
+    Parser.add_option("-G", "--gpio-enable", dest="Gpio", action='store_true',
+                      help="enable gpio capture")
+
+    Parser.set_defaults(Gpio=False)
+
     Parser.add_option("-S", "--samples-per-packet", dest="SamplesPerPacket", type=int, default=180,
                       help="select number of samples per packet", metavar="SAMPLES")
 
@@ -463,7 +479,7 @@ def main():
         logging.info("Starting DAQ...")
         Status = Daq.StartDaq(Options.IpAdrDst, Options.UdpPortDst, Options.DaqFreq,
                               Options.SamplesPerPacket, Options.ADCParallelReadout, Options.DropTimestamp,
-                              Options.RTPPayloadType)
+                              Options.RTPPayloadType, Options.Gpio)
         if Status < 0:
             logging.error("Error: Can't start DAQ")
         else:
