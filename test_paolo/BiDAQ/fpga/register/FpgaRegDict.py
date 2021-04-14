@@ -41,6 +41,13 @@ class FpgaRegDict:
         BiDAQ_gpio_control_4_bits = {
             "PIN_INPUT_VALUE": (0, 7)}
 
+        BiDAQ_virtual_gpio_control_0_bits = {
+            "ID": (8, 15),
+            "ENABLE": (0, 0)}
+
+        BiDAQ_virtual_gpio_control_1_bits = {
+            "VALUE": (0, 23)}
+
         pio_led_bits = {
             "LED0": (0, 0),
             "LED1": (1, 1),
@@ -233,14 +240,6 @@ class FpgaRegDict:
                 "sys_id_0": (0x00001010, sys_id_0_bits),
                 "sys_id_1": (0x00001014, sys_id_1_bits)},
 
-            # BiDAQ_gpio_control
-            "BiDAQ_gpio_control": {
-                "BiDAQ_gpio_control_0_bits": (0x00010800, BiDAQ_gpio_control_0_bits),
-                "BiDAQ_gpio_control_1_bits": (0x00010804, BiDAQ_gpio_control_1_bits),
-                "BiDAQ_gpio_control_2_bits": (0x00010808, BiDAQ_gpio_control_2_bits),
-                "BiDAQ_gpio_control_3_bits": (0x0001080C, BiDAQ_gpio_control_3_bits),
-                "BiDAQ_gpio_control_4_bits": (0x00010810, BiDAQ_gpio_control_4_bits)},
-
             # BiDAQ_sync_ref_generator
             "BiDAQ_sync_ref_generator": {
                 "BiDAQ_sync_ref_generator_0": (0x00013000, BiDAQ_sync_ref_generator_0_bits),
@@ -368,6 +367,22 @@ class FpgaRegDict:
                 "BiDAQ_control_{}_1".format(i): (0x00010004 + 0x100 * i, BiDAQ_control_1_bits),
                 "BiDAQ_control_{}_2".format(i): (0x00010008 + 0x100 * i, BiDAQ_control_2_bits)}
             LocalRegDict["BiDAQ_control_{}".format(i)] = NewDict
+
+            if i == 0:
+                # BiDAQ_gpio_control
+                NewDict = {
+                    "BiDAQ_gpio_control_0_bits": (0x00014000, BiDAQ_gpio_control_0_bits),
+                    "BiDAQ_gpio_control_1_bits": (0x00014004, BiDAQ_gpio_control_1_bits),
+                    "BiDAQ_gpio_control_2_bits": (0x00014008, BiDAQ_gpio_control_2_bits),
+                    "BiDAQ_gpio_control_3_bits": (0x0001400C, BiDAQ_gpio_control_3_bits),
+                    "BiDAQ_gpio_control_4_bits": (0x00014010, BiDAQ_gpio_control_4_bits)}
+                LocalRegDict["BiDAQ_gpio_control"] = NewDict
+            else:
+                # BiDAQ_virtual_gpio_control
+                NewDict = {
+                    "BiDAQ_virtual_gpio_control_0_bits": (0x00014000 + 0x100 * i, BiDAQ_virtual_gpio_control_0_bits),
+                    "BiDAQ_virtual_gpio_control_1_bits": (0x00014004 + 0x100 * i, BiDAQ_virtual_gpio_control_1_bits)}
+                LocalRegDict["BiDAQ_virtual_gpio_control_{}".format(i)] = NewDict
 
         BoardsList = list(BoardsList)
         if len(BoardsList) > 0:
