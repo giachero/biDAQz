@@ -194,7 +194,7 @@ class BiDAQ:
 
         self.FPGA.GpioControl.SetEnable(1)
         self.FPGA.GpioControl.SetCaptureEnable(1)
-        for i in list(range(VirtualGpioNumber)):
+        for i in list(range(1, VirtualGpioNumber + 1)):
             self.FPGA.GpioControl.SetVirtualGpioEnable(1, i)
 
     # Start DAQ
