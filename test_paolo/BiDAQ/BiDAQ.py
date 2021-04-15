@@ -190,9 +190,16 @@ class BiDAQ:
 
         return Status, SyncFreq, AdcFreq
 
+    def EnableGpio(self, VirtualGpioNumber=0):
+
+        self.FPGA.GpioControl.SetEnable(1)
+        self.FPGA.GpioControl.SetCaptureEnable(1)
+        for i in list(range(VirtualGpioNumber)):
+            self.FPGA.GpioControl.SetVirtualGpioEnable(1, i)
+
     # Start DAQ
     def StartDaq(self, IpAdrDst, UdpPortDst, Frequency, SamplesPerPacket=180, AdcParallelReadout=True,
-                 DropTimestamp=True, RTPPayloadType=20, Gpio=False):
+                 DropTimestamp=True, RTPPayloadType=20):
         """
         Start the DAQ.
 
@@ -210,8 +217,6 @@ class BiDAQ:
         :type DropTimestamp: bool
         :param RTPPayloadType: set RTP payload type header field.
         :type RTPPayloadType: int
-        :param Gpio: enable GPIO capture stream
-        :type Gpio: bool
         :return: status (a negative value means error).
         :rtype: int
         """
@@ -259,10 +264,6 @@ class BiDAQ:
         self.FPGA.DataPacketizer.SetRTPPayloadType(RTPPayloadType)
         self.FPGA.DataPacketizer.SetPayloadHeader(self.FPGA.SyncGenerator.GetDivider(1) + 1)
         self.FPGA.DataPacketizer.SetEnable(1)
-
-        if Gpio:
-            self.FPGA.GpioControl.SetEnable(1)
-            self.FPGA.GpioControl.SetCaptureEnable(1)
 
         # General enable (this is obsolete)
         self.FPGA.GeneralEnable.SetEnable(1)
@@ -420,6 +421,9 @@ def main():
 
     Parser.set_defaults(Gpio=False)
 
+    Parser.add_option("-V", "--virtual-gpio", dest="VirtualGpio", type=int, default=0,
+                      help="select number of enabled virtual gpio ports", metavar="NUMBER")
+
     Parser.add_option("-S", "--samples-per-packet", dest="SamplesPerPacket", type=int, default=180,
                       help="select number of samples per packet", metavar="SAMPLES")
 
@@ -476,10 +480,13 @@ def main():
         else:
             Daq.FPGA.SetSlave()
 
+        if Options.Gpio:
+            Daq.EnableGpio(Options.VirtualGpio)
+
         logging.info("Starting DAQ...")
         Status = Daq.StartDaq(Options.IpAdrDst, Options.UdpPortDst, Options.DaqFreq,
                               Options.SamplesPerPacket, Options.ADCParallelReadout, Options.DropTimestamp,
-                              Options.RTPPayloadType, Options.Gpio)
+                              Options.RTPPayloadType)
         if Status < 0:
             logging.error("Error: Can't start DAQ")
         else:
