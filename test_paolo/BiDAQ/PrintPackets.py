@@ -2,7 +2,9 @@ import BiDAQ
 
 b = BiDAQ.BiDAQ()
 
-PktsDataPacketizer = b.FPGA.DataPacketizer.GetPacketCount(2) + b.FPGA.DataPacketizer.GetPacketCount(8)
+PktsDataPacketizer = b.FPGA.DataPacketizer.GetPacketCount(8)
+for i in b.BoardList:
+    PktsDataPacketizer += b.FPGA.DataPacketizer.GetPacketCount(i)
 
 PktsUdpStreamer = b.FPGA.UdpStreamer.GetUdpStreamPacketCount()
 
