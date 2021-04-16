@@ -185,15 +185,15 @@ class BiDAQ:
         self.FPGA.SyncGenerator.SetDivider(SyncFreqDiv)
         log.debug("FPGA.SetDivider - SyncFreq: {}, SyncFreqDiv: {}".format(SyncFreq / 2, SyncFreqDiv))
 
-        if self.FPGA.Gpio is not None:
-            self.FPGA.SyncGenerator.SetDivider(SyncFreqDiv * 2, self.FPGA.Gpio)
+#        if self.FPGA.Gpio is not None:
+#            self.FPGA.SyncGenerator.SetDivider(SyncFreqDiv * 2, self.FPGA.Gpio)
 
         return Status, SyncFreq, AdcFreq
 
     def EnableGpio(self, VirtualGpioNumber=0):
 
-        self.FPGA.GpioControl.SetEnable(1)
         self.FPGA.GpioControl.SetCaptureEnable(1)
+        self.FPGA.GpioControl.SetEnable(1)
         for i in list(range(1, VirtualGpioNumber + 1)):
             self.FPGA.GpioControl.SetVirtualGpioEnable(1, i)
 
@@ -221,10 +221,11 @@ class BiDAQ:
         :rtype: int
         """
 
-        Status = self.StopDaq()
-        if Status < 0:
-            log.warning("Couldn't stop DAQ")
-            return Status
+        # TODO: check that DAQ is not running
+#        Status = self.StopDaq()
+#        if Status < 0:
+#            log.warning("Couldn't stop DAQ")
+#            return Status
 
         Status, SyncFreq, AdcFreq = self.SetFrequency(Frequency)
         if Status < 0:
@@ -295,6 +296,8 @@ class BiDAQ:
         self.FPGA.DataPacketizer.SetEnable(0)
         if self.FPGA.Gpio is not None:
             self.FPGA.GpioControl.SetEnable(0)
+            self.FPGA.GpioControl.SetCaptureEnable(0)
+            self.FPGA.GpioControl.SetVirtualGpioEnable(0)
         Status = 0
 
         for Brd in range(0, len(self.Board)):

@@ -26,6 +26,7 @@ class FpgaRegDict:
 
         BiDAQ_gpio_control_0_bits = {
             "ID": (8, 15),
+            "SYNC_DIVIDE": (4, 4),
             "CAPTURE_ENABLE": (1, 1),
             "ENABLE": (0, 0)}
 
@@ -43,6 +44,7 @@ class FpgaRegDict:
 
         BiDAQ_virtual_gpio_control_0_bits = {
             "ID": (8, 15),
+            "SYNC_DIVIDE": (4, 4),
             "ENABLE": (0, 0)}
 
         BiDAQ_virtual_gpio_control_1_bits = {
