@@ -30,8 +30,8 @@ class GpioControl:
     def GetCaptureEnable(self):
         return self.FpgaReg.FpgaMem.ReadBits("BiDAQ_gpio_control", "CAPTURE_ENABLE")
 
-    def SetId(self, Enable):
-        self.FpgaReg.FpgaMem.WriteBits("BiDAQ_gpio_control", "ID", Enable)
+    def SetId(self, ID):
+        self.FpgaReg.FpgaMem.WriteBits("BiDAQ_gpio_control", "ID", ID)
 
     def GetId(self):
         return self.FpgaReg.FpgaMem.ReadBits("BiDAQ_gpio_control", "ID")
@@ -40,7 +40,7 @@ class GpioControl:
         return self.FpgaReg.FpgaMem.ReadBits("BiDAQ_gpio_control", "PIN_ENABLE")
 
     def SetPortEnable(self, Enable):
-        self.FpgaReg.FpgaMem.WriteBits("BiDAQ_gpio_control", "PIN_ENABLE", 0xFF * Enable)
+        self.FpgaReg.FpgaMem.WriteBits("BiDAQ_gpio_control", "PIN_ENABLE", Enable)
 
     def GetPinEnable(self, Pin):
         return (self.GetPortEnable() >> Pin) & 1
@@ -51,19 +51,19 @@ class GpioControl:
             New = Curr | (1 << Pin)
         else:
             New = Curr & ~(1 << Pin)
-        self.FpgaReg.FpgaMem.WriteBits("BiDAQ_gpio_control", "PIN_ENABLE", New)
+        self.SetPortEnable(New)
 
     def GetPortDirection(self):
         return self.FpgaReg.FpgaMem.ReadBits("BiDAQ_gpio_control", "PIN_DIRECTION")
 
     def SetPortDirection(self, Dir):
-        self.FpgaReg.FpgaMem.WriteBits("BiDAQ_gpio_control", "PIN_DIRECTION", 0xFF * Dir)
+        self.FpgaReg.FpgaMem.WriteBits("BiDAQ_gpio_control", "PIN_DIRECTION", Dir)
 
     def SetPortOutput(self):
-        self.SetPortDirection(1)
+        self.SetPortDirection(0xFF)
 
     def SetPortInput(self):
-        self.SetPortDirection(0)
+        self.SetPortDirection(0x00)
 
     def GetPinDirection(self, Pin):
         return (self.GetPortDirection() >> Pin) & 1
@@ -74,7 +74,7 @@ class GpioControl:
             New = Curr | (1 << Pin)
         else:
             New = Curr & ~(1 << Pin)
-        self.FpgaReg.FpgaMem.WriteBits("BiDAQ_gpio_control", "PIN_DIRECTION", New)
+        self.SetPortDirection(New)
 
     def SetPinOutput(self, Pin):
         self.SetPinDirection(Pin, 1)
@@ -97,7 +97,7 @@ class GpioControl:
             New = Curr | (1 << Pin)
         else:
             New = Curr & ~(1 << Pin)
-        self.FpgaReg.FpgaMem.WriteBits("BiDAQ_gpio_control", "PIN_OUTPUT_VALUE", New)
+        self.SetPortOutputValue(New)
 
     def GetPortInputValue(self):
         return self.FpgaReg.FpgaMem.ReadBits("BiDAQ_gpio_control", "PIN_INPUT_VALUE")
