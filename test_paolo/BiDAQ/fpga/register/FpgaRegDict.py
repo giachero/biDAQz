@@ -357,6 +357,14 @@ class FpgaRegDict:
                 "sc_fifo_tx_eth_tse_4": (0x00035010, avalon_st_single_clock_fifo_4_bits),
                 "sc_fifo_tx_eth_tse_5": (0x00035014, avalon_st_single_clock_fifo_5_bits)},
 
+            # sc_fifo_mii_conversion
+            "sc_fifo_mii_conversion": {
+                "sc_fifo_mii_conversion0": (0x00036000, avalon_st_single_clock_fifo_0_bits),
+                "sc_fifo_mii_conversion_2": (0x00036008, avalon_st_single_clock_fifo_2_bits),
+                "sc_fifo_mii_conversion_3": (0x0003600C, avalon_st_single_clock_fifo_3_bits),
+                "sc_fifo_mii_conversion_4": (0x00036010, avalon_st_single_clock_fifo_4_bits),
+                "sc_fifo_mii_conversion_5": (0x00036014, avalon_st_single_clock_fifo_5_bits)},
+
             # hps_emac_interface_splitter
             "hps_emac_interface_splitter": {
                 "hps_emac_interface_splitter_0": (0x00033000, hps_emac_interface_splitter_0_bits)},

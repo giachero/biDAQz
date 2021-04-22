@@ -51,6 +51,7 @@ class BiDAQFPGA:
         self.FifoOutDataAdapter = ScFifo.ScFifo("fifo_adapter_data")
         self.FifoOutData = ScFifo.ScFifo("sc_fifo_data")
         self.FifoTxMac = ScFifo.ScFifo("sc_fifo_tx_eth_tse")
+        self.FifoMiiConversion = ScFifo.ScFifo("sc_fifo_mii_conversion")
 
         # Low level register access
         self.LL = FpgaReg.FpgaReg(BoardList)
@@ -112,7 +113,7 @@ class BiDAQFPGA:
         TM = self.TxMac.GetMonitorRegisters()
         HTM = self.HpsToTxMac.GetMonitorRegisters()
         Fifo = dict()
-        FifoList = ("FifoHpsMac", "FifoOutDataAdapter", "FifoOutData", "FifoTxMac")
+        FifoList = ("FifoHpsMac", "FifoOutDataAdapter", "FifoOutData", "FifoTxMac", "FifoMiiConversion")
         for CurFifo in FifoList:
             Fifo[CurFifo] = dict()
             CurFifoAttr = getattr(self, CurFifo)
