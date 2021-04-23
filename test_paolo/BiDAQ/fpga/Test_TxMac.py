@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import BiDAQFPGA
+from . import BiDAQFPGA
 
 
 def main():

@@ -10,8 +10,7 @@ Welcome to BiDAQ's documentation!
    :maxdepth: 3
    :caption: Contents:
 
-.. automodule:: BiDAQ
-   :members:
+   modules
 
 Indices and tables
 ==================

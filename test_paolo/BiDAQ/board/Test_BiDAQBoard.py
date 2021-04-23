@@ -3,7 +3,7 @@
 import random
 # import time
 
-import BiDAQBoard
+from . import BiDAQBoard
 
 
 def main():

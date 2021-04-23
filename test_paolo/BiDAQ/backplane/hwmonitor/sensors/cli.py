@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import sensors
+from . import sensors
 
 
 def main():
