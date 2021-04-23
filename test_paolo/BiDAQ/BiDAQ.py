@@ -332,7 +332,7 @@ class BiDAQ:
         while True:
             MonitorDict = self.GetFPGAMonitorRegisters()
 
-            FifoList = ("FifoHpsMac", "FifoOutDataAdapter", "FifoOutData", "FifoTxMac")
+            FifoList = ("FifoHpsMac", "FifoOutDataAdapter", "FifoOutData", "FifoTxMac", "FifoMiiConversion")
             for CurFifo in FifoList:
                 if CurFifo not in StoreMax:
                     StoreMax[CurFifo] = MonitorDict[CurFifo]["FillLevel"]
