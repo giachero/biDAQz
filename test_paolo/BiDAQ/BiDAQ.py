@@ -17,27 +17,43 @@ log = logging.getLogger("BiDAQ")
 # noinspection DuplicatedCode
 class BiDAQ:
     """
-    BiDAQ is the class to control the FPGA registers (through /dev/mem) and the BiDAQ boards (through CAN bus)
+    BiDAQ is the main class to control the Bicocca's DAQ (BiDAQ).
+
+    Use this class to control the FPGA registers (through /dev/mem), the BiDAQ boards (through CAN bus), and the other
+    peripherals on the backplane (through I2C).
+
+    The class can be also used from the command line. Refer to the command line help (with option --help) for more
+    information.
+
+    :ivar Crate: Crate number (ID).
+    :vartype Crate: int
+    :ivar Half: Backplane half (0 or 1).
+    :vartype Half: int
+    :ivar BoardList: List of connected (and working) BiDAQ boards.
+    :vartype BoardList: list of integers
+    :ivar FPGA: Class to control FPGA registers.
+    :vartype FPGA: :class:`fpga.BiDAQFPGA` class
+    :ivar Board: List of classes to control the BiDAQ boards.
+    :vartype Board: list of :class:`board.BiDAQBoard` classes
+    :ivar Backplane: Class to control backplane functions.
+    :vartype Backplane: :class:`backplane.BiDAQBackplane` class
     """
 
-    # Class constructor
     def __init__(self, Crate=None, Half=None, BoardList=None):
         """
-        BiDAQ class constructor.
-
-        :param Crate: crate number, if None, then it is read automatically using the I2C port expander
+        :param Crate: Crate number. If None, it is read automatically using the I2C port expander.
         :type Crate: int
-        :param BoardList: list of connected boards, if None, then the class will try to determine it automatically,
-            using FPGA SysID register and querying boards with NOPs commands
+        :param Half: Backplane half. If None, it is read automatically using the I2C port expander.
+        :type Half: int
+        :param BoardList: List of connected boards. If None, the class will try to determine it automatically,
+            using FPGA SysID register (to read how many blocks are instantiated) and querying boards with NOP commands
+            through CAN bus.
         :type BoardList: list or tuple of integers
         """
 
         # Init the FPGA registers, if BoardList is None, the class will determine automatically the number of boards by
         # looking at the SysID register defined at build time
         self.FPGA = BiDAQFPGA.BiDAQFPGA(BoardList)
-
-        # Retrieve the list
-        self.BoardList = self.FPGA.BoardList
 
         # Init the backplane class
         self.Backplane = BiDAQBackplane.BiDAQBackplane()
@@ -58,20 +74,33 @@ class BiDAQ:
         self.FPGA.InitRtpSourceIds(0xB1DAC, self.Crate, self.Half)
 
     def InitBoards(self):
+        """
+        Initialize :class:`board.BiDAQBoard` class by checking that the boards are replying correctly. The function
+        uses *BoardList* instance variable as the list of boards to scan.
 
+        :return: A list of :class:`board.BiDAQBoard` classes and the new *BoardList*.
+        :rtype: list of :class:`board.BiDAQBoard`, list of integers
+        """
         Board = list()
-        BoardList = self.BoardList.copy()
-        for CurrentBoard in self.BoardList:
+        BoardList = self.FPGA.BoardList.copy()
+        for CurrentBoard in self.FPGA.BoardList:
             Board.append(BiDAQBoard.BiDAQBoard(self.Crate, CurrentBoard + 8*self.Half))
             if Board[-1].NOP()[0] < 0:
                 Board.pop()
                 BoardList.remove(CurrentBoard)
+            else:
+                Board[-1].InitBoard()
         self.BoardList = BoardList
         return Board, BoardList
 
     def FindBoardIdx(self, Brd):
         """
-        Get board index from board number
+        Get board index from board number (if some boards are not installed, the board number is different than index).
+
+        :param Brd: Board number.
+        :type Brd: int
+        :return: Board index (to be used with *self.Board[]* class list).
+        :rtype: int
         """
 
         for BrdIdx in range(len(self.Board)):
@@ -84,15 +113,17 @@ class BiDAQ:
         """
         Configure channels using a list or tuple.
 
-        :param ConfigList: channel configuration passed as a list of lists. Each element of the list must have 5
-            elements: [Board, Channel, Ground, Enable, Frequency]. Board is a list of boards (counting from 0), e.g.
-            [0,1]. Channel is a list of channels (0 means all channels of the board, 1-12), e.g. [1,2,3,4]. Ground is
-            the setting for grounding the inputs (valid options are 0, 1, False or True). Enable is the setting to
-            enable the Bessel filter (same options as before). Frequency is an int value for the Bessel filter cut-off
-            frequency (valid values are from 24 to 2500). Example:
-            [[[0,1],[1,2,3,4,5,6],True,True,24], [[0,1],[7,8,9,10,11,12],False,False,100]]
+        :param ConfigList:
+            |   Channel configuration passed as a list of lists. Each element of the list must have 5
+                elements: [Board, Channel, Ground, Enable, Frequency]. Board is a list of boards (counting from 0), e.g.
+                [0,1]. Channel is a list of channels (0 means all channels of the board, 1-12), e.g. [1,2,3,4]. Ground
+                is the setting for grounding the inputs (valid options are 0, 1, False or True). Enable is the setting
+                to enable the Bessel filter (same options as before). Frequency is an int value for the Bessel filter
+                cut-off frequency (valid values are from 24 to 2500).
+            |   Example:
+            |   [[[0,1],[1,2,3,4,5,6],True,True,24],[[0,1],[7,8,9,10,11,12],False,False,100]]
         :type ConfigList: list or tuple
-        :return: return status (a negative value means error).
+        :return: Return status (a negative value means error).
         :rtype: int
         """
         Status = 0
@@ -121,13 +152,13 @@ class BiDAQ:
         """
         Configure channels using a dictionary.
 
-        :param ConfigDict: channel configuration is passed as a dictionary or list of dictionaries. Each key or element
+        :param ConfigDict: Channel configuration is passed as a dictionary or list of dictionaries. Each key or element
             is a dictionary which must have specific keys: 'Board' - list of boards (counting from 0), e.g. [0,1],
             'Channel' - list of channels (1-12, 0 means all), 'Ground' - setting for grounding the inputs (valid options
             are 0, 1, False or True), 'Enable' - setting to enable the Bessel filter (same options as before), 'Freq' -
             int value for the Bessel filter cut-off frequency (valid values are from 24 to 2500).
         :type ConfigDict: dict
-        :return: return status (a negative value means error).
+        :return: Return status (a negative value means error).
         :rtype: int
         """
         Status = 0
@@ -158,9 +189,9 @@ class BiDAQ:
         values. The ADC samples the data at a higher frequency wrt the sync signal, because it uses its internal
         clock which is not synchronous and some margin must be provided.
 
-        :param Frequency: requested DAQ sampling frequency.
+        :param Frequency: Requested DAQ sampling frequency.
         :type Frequency: int
-        :return: a list with status (a negative value means error), synchronization signal frequency (at least twice the
+        :return: A list with status (a negative value means error), synchronization signal frequency (at least twice the
             requested DAQ frequency), and the ADC sampling frequency.
         """
 
@@ -191,6 +222,12 @@ class BiDAQ:
         return Status, SyncFreq, AdcFreq
 
     def EnableGpio(self, VirtualGpioNumber=0):
+        """
+        Enable GPIO capture. The optional argument allow to enable also up to 7 24-bit virtual GPIOs.
+
+        :param VirtualGpioNumber: Number of virtual GPIOs to be enabled (0-7).
+        :type VirtualGpioNumber: int
+        """
 
         self.FPGA.GpioControl.SetCaptureEnable(1)
         self.FPGA.GpioControl.SetEnable(1)
@@ -203,21 +240,21 @@ class BiDAQ:
         """
         Start the DAQ.
 
-        :param IpAdrDst: destination IP address.
+        :param IpAdrDst: Destination IP address.
         :type IpAdrDst: int
-        :param UdpPortDst: destination and source UDP ports.
+        :param UdpPortDst: Destination and source UDP ports.
         :type UdpPortDst: int
-        :param Frequency: desired DAQ frequency.
+        :param Frequency: Desired DAQ frequency.
         :type Frequency: int
-        :param SamplesPerPacket: number of samples in each RTP packet.
+        :param SamplesPerPacket: Number of samples in each RTP packet.
         :type SamplesPerPacket: int
-        :param AdcParallelReadout: set ADC parallel readout.
+        :param AdcParallelReadout: Set ADC parallel readout.
         :type AdcParallelReadout: bool
-        :param DropTimestamp: drop timestamps from the output data stream.
+        :param DropTimestamp: Drop timestamps from the output data stream.
         :type DropTimestamp: bool
-        :param RTPPayloadType: set RTP payload type header field.
+        :param RTPPayloadType: Set RTP payload type header field.
         :type RTPPayloadType: int
-        :return: status (a negative value means error).
+        :return: Return status (a negative value means error).
         :rtype: int
         """
 
@@ -284,7 +321,7 @@ class BiDAQ:
         """
         Stop the DAQ.
 
-        :return: status (a negative value means error).
+        :return: Return status (a negative value means error).
         :rtype: int
         """
 
@@ -317,15 +354,29 @@ class BiDAQ:
         return 0
 
     def GetFPGAMonitorRegisters(self):
+        """
+        Get the FPGA monitoring registers.
+
+        :return: Dictionary of several monitoring registers.
+        :rtype: dict
+        """
 
         MonitorDict = self.FPGA.GetMonitorRegisters()
         return MonitorDict
 
     def PrintFPGAMonitorRegisters(self):
+        """
+        Print the FPGA monitoring registers.
+        """
 
         pprint.pprint(self.GetFPGAMonitorRegisters())
 
     def MonitorFPGAFifoFillLevels(self):
+        """
+        Continuously monitoring of the FIFO fill levels. Data is printed when a new and higher value is found in one of
+        the FIFO's fill level registers. The function performs a polling, so the actual maximum fill level can be higher
+        than the one displayed. To stop the function, press CTRL+C.
+        """
 
         StoreMax = dict()
 
@@ -358,7 +409,8 @@ def __BoardsOptionsCallback(option, _opt, value, parser):
     setattr(parser.values, option.dest, list(map(int, value.split(','))))
 
 
-def main():
+def __MainFunction():
+
     Parser = optparse.OptionParser()
 
     Parser.set_usage("BiDAQ.py [options] start|stop")
@@ -502,4 +554,4 @@ def main():
 
 
 if __name__ == '__main__':
-    sys.exit(main())
+    sys.exit(__MainFunction())

@@ -39,6 +39,7 @@ class BiDAQBoard:
         self.CANBus = can.interface.Bus('can0', bustype='socketcan', bitrate=1000000)
         self.CANReader = can.BufferedReader()
         self.CANNotifier = can.Notifier(self.CANBus, [self.CANReader])
+        self.LatestHwRev = -1
 
         self.CANBus.set_filters([{"can_id": self.ID, "can_mask": 0x1FFFFFF0, "extended": True}])
 
@@ -217,6 +218,15 @@ class BiDAQBoard:
 
         # Return status code and number of iterations
         return Status, i + 1
+
+    # Initializations
+    def InitBoard(self):
+        Status, Value = self.SendCommand("HW_REV_READ", 0, 0, self.DefaultTimeout)
+        if Status == 0:
+            self.LatestHwRev = Value[0]
+        else:
+            self.LatestHwRev = -1
+        return 0
 
     # No OPeration (NOP) command
     def NOP(self, Queue=False):
