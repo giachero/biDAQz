@@ -1,4 +1,7 @@
-from .sensors import sensors
+try:
+    from .sensors import sensors
+except ImportError:
+    pass
 
 
 class HWMonitor:

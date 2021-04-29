@@ -30,7 +30,7 @@ class FpgaReg:
         BaseAdr = 0xC0000000
         MemLen = 0x00040000
         # Initialize DevMem class
-        self.FpgaMem = Reg.Reg(BaseAdr, MemLen, RegDictClass.CreateDict(BoardList))
+        self.FpgaMem = Reg.Reg(BaseAdr, MemLen, RegDictClass.CreateDict(BoardList, Gpio))
 
     def SetBoardSettingGeneric(self, RegName, BitName, Data, Board=None, Gpio=None):
         Ret = 0
@@ -46,7 +46,8 @@ class FpgaReg:
             Ret = self.FpgaMem.WriteBits(RegName + str(Board), BitName, Data)
 
         if Ret < 0:
-            raise Exception("SetBoardSetting error - RegName: {}, BitName: {}".format(RegName, BitName))
+            raise Exception("SetBoardSetting error - RegName: {}, BitName: {}, Data: {}, Board: {}, Gpio: {}".format(
+                RegName, BitName, hex(Data), Board, Gpio))
 
     def SetBoardSetting(self, RegName, BitName, Data, Board=None):
         self.SetBoardSettingGeneric(RegName, BitName, Data, Board, self.Gpio)

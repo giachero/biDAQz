@@ -13,8 +13,8 @@ class GpioControl:
             BoardList = list(range(8))
 
         # Initialize register management class
-        self.FpgaReg = FpgaReg.FpgaReg(BoardList)
-        self.BoardList = BoardList
+        self.BoardList = BoardList.copy()
+        self.FpgaReg = FpgaReg.FpgaReg(self.BoardList)
 
         self.FpgaReg.BoardList.pop(0)
 

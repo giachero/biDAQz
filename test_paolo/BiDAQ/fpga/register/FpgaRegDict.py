@@ -4,7 +4,7 @@ class FpgaRegDict:
 
     # Dictionary creator
     @staticmethod
-    def CreateDict(BoardsList=tuple(range(8))):
+    def CreateDict(BoardsList=tuple(range(8)), Gpio=None):
         BiDAQ_control_0_bits = {
             "SPI_POL": (31, 31),
             "SPI_PHA": (30, 30),
@@ -395,8 +395,8 @@ class FpgaRegDict:
                 LocalRegDict["BiDAQ_virtual_gpio_control_{}".format(i)] = NewDict
 
         BoardsListCopy = list(BoardsList).copy()
-        if len(BoardsListCopy) > 0:
-            BoardsListCopy.append(max(BoardsListCopy) + 1)
+        if (len(BoardsListCopy) > 0) & (Gpio is not None):
+            BoardsListCopy.append(Gpio)
 
         for i in BoardsListCopy:
 

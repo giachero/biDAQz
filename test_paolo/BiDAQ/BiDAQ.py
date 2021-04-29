@@ -51,20 +51,29 @@ class BiDAQ:
         :type BoardList: list or tuple of integers
         """
 
+        # logging.basicConfig(stream=sys.stderr, level=logging.INFO)
+
         # Init the FPGA registers, if BoardList is None, the class will determine automatically the number of boards by
         # looking at the SysID register defined at build time
         self.FPGA = BiDAQFPGA.BiDAQFPGA(BoardList)
 
         # Init the backplane class
-        self.Backplane = BiDAQBackplane.BiDAQBackplane()
+        if self.FPGA.SysId.GetFwRevision() > 4:
+            self.Backplane = BiDAQBackplane.BiDAQBackplane()
 
         if Crate is None:
-            self.Crate = self.Backplane.Crate
+            try:
+                self.Crate = self.Backplane.Crate
+            except AttributeError:
+                self.Crate = 0
         else:
             self.Crate = Crate
 
         if Half is None:
-            self.Half = self.Backplane.Half
+            try:
+                self.Half = self.Backplane.Half
+            except AttributeError:
+                self.Half = 0
         else:
             self.Half = Half
 
@@ -83,6 +92,10 @@ class BiDAQ:
         """
         Board = list()
         BoardList = self.FPGA.BoardList.copy()
+
+        logging.info("Initializing BiDAQ boards")
+        logging.info("Starting BoardList: {}".format(BoardList))
+
         for CurrentBoard in self.FPGA.BoardList:
             Board.append(BiDAQBoard.BiDAQBoard(self.Crate, CurrentBoard + 8*self.Half))
             if Board[-1].NOP()[0] < 0:
@@ -91,6 +104,9 @@ class BiDAQ:
             else:
                 Board[-1].InitBoard()
         self.BoardList = BoardList
+
+        logging.info("Final BoardList: {}".format(BoardList))
+
         return Board, BoardList
 
     def FindBoardIdx(self, Brd):
@@ -307,7 +323,8 @@ class BiDAQ:
         self.FPGA.GeneralEnable.SetEnable(1)
 
         # Setup the sync generator block
-        self.FPGA.SyncGenerator.SetTimestampResetValue(0xFFFFFFFF)
+        if self.FPGA.SysId.GetFwRevision() > 4:
+            self.FPGA.SyncGenerator.SetTimestampResetValue(0xFFFFFFFF)
         self.FPGA.SyncGenerator.Reset()
         self.FPGA.SyncGenerator.SetEnable(1)
 
@@ -530,10 +547,11 @@ def __MainFunction():
         ]
         Daq.SetChannelConfigList(CfgList)
 
-        if Options.Master:
-            Daq.FPGA.SetMaster()
-        else:
-            Daq.FPGA.SetSlave()
+        if Daq.FPGA.SysId.GetFwRevision() > 4:
+            if Options.Master:
+                Daq.FPGA.SetMaster()
+            else:
+                Daq.FPGA.SetSlave()
 
         if Options.Gpio:
             Daq.EnableGpio(Options.VirtualGpio)
