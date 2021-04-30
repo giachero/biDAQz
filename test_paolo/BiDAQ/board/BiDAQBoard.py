@@ -221,9 +221,11 @@ class BiDAQBoard:
 
     # Initializations
     def InitBoard(self):
-        Status, Value = self.SendCommand("HW_REV_READ", 0, 0, self.DefaultTimeout)
+        Status, Value = self.ReadLatestHWRevision()
         if Status == 0:
             self.LatestHwRev = Value[0]
+            if self.LatestHwRev:
+                self.WriteADCRefBufferEnable(0, 0)
         else:
             self.LatestHwRev = -1
         return 0
@@ -243,6 +245,10 @@ class BiDAQBoard:
     # Read FW version. Format: YYMMDDhhmm
     def ReadFWVersion(self, Queue=False):
         return self.SendCommand("FW_VER_READ", 0, 0, self.DefaultTimeout, Queue)
+
+    # Read latest HW revision
+    def ReadLatestHWRevision(self, Queue=False):
+        return self.SendCommand("HW_REV_READ", 0, 0, self.DefaultTimeout, Queue)
 
     # Blink LEDs
     def Blink(self, Mode=0, Delay_ms=0, Period_ms=500, N=3, Queue=False):
