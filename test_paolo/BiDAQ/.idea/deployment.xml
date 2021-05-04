@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="Always" filePermissions="493" remoteFilesAllowedToDisappearOnAutoupload="false">
+  <component name="PublishConfigData" autoUpload="Always" serverName="root@192.168.1.2:22 password" filePermissions="493" remoteFilesAllowedToDisappearOnAutoupload="false">
     <serverData>
       <paths name="root@192.168.1.10:22">
         <serverdata>
@@ -17,6 +17,13 @@
         </serverdata>
       </paths>
       <paths name="root@192.168.1.2:22">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/daq/daq_class/" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="root@192.168.1.2:22 password">
         <serverdata>
           <mappings>
             <mapping deploy="/daq/daq_class/" local="$PROJECT_DIR$" web="/" />

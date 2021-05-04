@@ -131,13 +131,13 @@ class BiDAQ:
 
         :param ConfigList:
             |   Channel configuration passed as a list of lists. Each element of the list must have 5
-                elements: [Board, Channel, Ground, Enable, Frequency]. Board is a list of boards (counting from 0), e.g.
-                [0,1]. Channel is a list of channels (0 means all channels of the board, 1-12), e.g. [1,2,3,4]. Ground
-                is the setting for grounding the inputs (valid options are 0, 1, False or True). Enable is the setting
+                elements: [Board, Channel, Input, Enable, Frequency]. Board is a list of boards (counting from 0), e.g.
+                [0,1]. Channel is a list of channels (0 means all channels of the board, 1-12), e.g. [1,2,3,4]. Input
+                is the setting for input connections (0=conn, 1=gnd, 2=vrefp or 3=vrefn). Enable is the setting
                 to enable the Bessel filter (same options as before). Frequency is an int value for the Bessel filter
                 cut-off frequency (valid values are from 24 to 2500).
             |   Example:
-            |   [[[0,1],[1,2,3,4,5,6],True,True,24],[[0,1],[7,8,9,10,11,12],False,False,100]]
+            |   [[[0,1],[1,2,3,4,5,6],0,True,24],[[0,1],[7,8,9,10,11,12],1,False,100]]
         :type ConfigList: list or tuple
         :return: Return status (a negative value means error).
         :rtype: int
@@ -146,17 +146,17 @@ class BiDAQ:
         for Line in ConfigList:
             for Brd in Line[0]:
                 for Channel in Line[1]:
-                    Ground = Line[2]
+                    Input = Line[2]
                     Enable = Line[3]
                     Freq = Line[4]
                     log.info(
-                        "SetChannelConfig - Brd: {}, Ch: {} - Grounded: {}, Enable: {}, Frequency: {}".format(Brd,
+                        "SetChannelConfig - Brd: {}, Ch: {} - Input: {}, Enable: {}, Frequency: {}".format(Brd,
                                                                                                               Channel,
-                                                                                                              Ground,
+                                                                                                              Input,
                                                                                                               Enable,
                                                                                                               Freq))
                     BrdIdx = self.FindBoardIdx(Brd)
-                    Status, Value = self.Board[BrdIdx].WriteFilterSettings(Channel, Freq, Enable, Ground)
+                    Status, Value = self.Board[BrdIdx].WriteFilterSettings(Channel, Freq, Enable, Input)
                     if Status < 0:
                         warnings.warn(
                             "Warning. SetChannelConfig - Brd: {}, Ch: {}, Status: {}, Value: {}".format(Brd, Channel,
@@ -453,13 +453,8 @@ def __MainFunction():
 
     Parser.set_defaults(FilterEnable=True)
 
-    Parser.add_option("-g", "--filter-ground", dest="FilterGrounded", action='store_true',
-                      help="select filter input ground")
-
-    Parser.add_option("-C", "--filter-connected", dest="FilterGrounded", action='store_false',
-                      help="select filter input connected")
-
-    Parser.set_defaults(FilterGrounded=False)
+    Parser.add_option("-I", "--input-connection", dest="InputConnection", type=int, default = 0,
+                      help="select filter input connection (0=conn, 1=gnd, 2=vrefp, 3=vrefn", metavar="VAL")
 
     Parser.add_option("-F", "--daq-frequency", dest="DaqFreq", type=int, default=1000,
                       help="select daq frequency", metavar="FREQ")
@@ -543,7 +538,7 @@ def __MainFunction():
         BrdList = Daq.BoardList
         # Build channel config list according to input options. Apply the same settings to all channels
         CfgList = [
-            [[x+8*Daq.Half for x in BrdList], [0], Options.FilterGrounded, Options.FilterEnable, Options.FilterFreq]
+            [[x+8*Daq.Half for x in BrdList], [0], Options.InputConnection, Options.FilterEnable, Options.FilterFreq]
         ]
         Daq.SetChannelConfigList(CfgList)
 

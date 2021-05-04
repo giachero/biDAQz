@@ -1,7 +1,5 @@
 #!/usr/bin/python
 
-import warnings
-
 import logging
 
 import can
@@ -63,7 +61,7 @@ class BiDAQBoard:
         OutMsg.is_extended_id = True
         OutMsg.arbitration_id = self.ID + Channel
 
-        log.debug("Function: SendData - W: {}".format(OutMsg))
+        log.debug("SendData - W: {}".format(OutMsg))
 
         # Send message
         self.CANBus.send(OutMsg)
@@ -75,28 +73,27 @@ class BiDAQBoard:
         # Blocking-case, read incoming reply message
         InMsg = self.CANReader.get_message(Timeout)
 
-        log.debug("Function: SendData - R: {}".format(InMsg))
+        log.debug("SendData - R: {}".format(InMsg))
 
         return InMsg
 
     def SendCommand(self, CommandStr, Data, Channel=0, Timeout=DefaultTimeout, Queue=False):
 
-        CommandStr = "CAN_CMD_" + CommandStr
-        if CommandStr not in self.CommandDict:
+        CommandStrExt = "CAN_CMD_" + CommandStr
+        if CommandStrExt not in self.CommandDict:
             # raise ValueError("Command not found in command dictionary")
             return -1, None
 
         log.debug(
-            "Function: SendCommand - Cmd: {} - Data: {} - Ch {} - Timeout: {} - Queue: {}".format(CommandStr, Data,
-                                                                                                  Channel, Timeout,
-                                                                                                  Queue))
+            "SendCommand - Cmd: {} - Data: {} - Ch {} - Timeout: {} - Queue: {}".format(CommandStrExt, Data, Channel,
+                                                                                        Timeout, Queue))
 
         Status, Cnt = self.Wake()
         if Status:
             # raise Exception("The board can't be awaken or does not reply")
             return Status, Cnt
 
-        InMsg = self.SendData(self.CommandDict[CommandStr]["CommandByte"], Data, Channel, Timeout)
+        InMsg = self.SendData(self.CommandDict[CommandStrExt]["CommandByte"], Data, Channel, Timeout)
 
         if InMsg is None:
             if Timeout is None:
@@ -105,11 +102,18 @@ class BiDAQBoard:
                 # raise Exception("Timeout. No reply to CAN bus command message")
                 return Status, None
 
-        Status, InData, Value = self.ParseInMsg(InMsg, CommandStr)
+        Status, InData, Value = self.ParseInMsg(InMsg, CommandStrExt)
 
-        log.debug("Function: SendCommand - Status: {} - RcvData: {} - Return value: {}".format(Status, InData, Value))
+        log.debug("SendCommand - Status: {} - RcvData: {} - Return value: {}".format(Status, InData, Value))
 
         Status = self.CheckStatus(Status)
+
+        if Status < 0:
+            ErrString = "SendCommand - Command: {}".format(CommandStr)
+            if Status == -1:
+                log.warning(ErrString)
+            if Status == -2:
+                log.error(ErrString)
 
         return Status, Value
 
@@ -129,55 +133,55 @@ class BiDAQBoard:
 
         if Status == self.CommandDict["CAN_CMD_NOT_IMPLEMENTED"]["CommandByte"]:
             # raise Exception("Error. Command not implemented")
-            warnings.warn("Error. Command not implemented")
+            log.error("CheckStatus - Command not implemented")
             Status = -2
         elif Status == self.CommandDict["CAN_CMD_WRONG_CHANNEL"]["CommandByte"]:
             # raise Exception("Error. Wrong channel selected")
-            warnings.warn("Error. Wrong channel selected")
+            log.error("CheckStatus - Wrong channel selected")
             Status = -2
         elif Status == self.CommandDict["CAN_CMD_WRONG_ARG"]["CommandByte"]:
             # raise Exception("Error. Wrong argument")
-            warnings.warn("Error. Wrong argument")
+            log.error("CheckStatus - Wrong argument")
             Status = -2
         elif Status == self.CommandDict["CAN_CMD_UNKNOWN_CMD"]["CommandByte"]:
             # raise Exception("Error. Unknown command selected")
-            warnings.warn("Error. Unknown command selected")
+            log.error("CheckStatus - Unknown command selected")
             Status = -2
         elif Status == self.CommandDict["CAN_CMD_QUEUE_FULL"]["CommandByte"]:
             # raise Exception("Error. Command queue is full")
-            warnings.warn("Error. Command queue is full")
+            log.error("CheckStatus - Command queue is full")
             Status = -2
         elif Status == self.CommandDict["CAN_CMD_ERROR"]["CommandByte"]:
             # raise Exception("Error. Command error")
-            warnings.warn("Error. Command error")
+            log.error("CheckStatus - Command error")
             Status = -2
         elif Status == self.CommandDict["CAN_CMD_BUSY"]["CommandByte"]:
-            warnings.warn("Warning. Board is busy")
+            log.warning("CheckStatus - Board is busy")
             Status = -1
         elif Status == self.CommandDict["CAN_CMD_WARNING"]["CommandByte"]:
-            warnings.warn("Warning. Command warning")
+            log.warning("CheckStatus - Command warning")
             Status = -1
         return Status
 
     def CheckReply(self, CommandStr, Channel=0, Timeout=DefaultTimeout):
 
-        CommandStr = "CAN_CMD_" + CommandStr
-        if CommandStr not in self.CommandDict:
+        CommandStrExt = "CAN_CMD_" + CommandStr
+        if CommandStrExt not in self.CommandDict:
             # raise ValueError("Command not found in command dictionary")
             return -1, None
 
         InMsg = self.CANReader.get_message(Timeout)
 
-        log.debug("Function: CheckReply - {}".format(InMsg))
+        log.debug("CheckReply - {}".format(InMsg))
 
         if InMsg is None:
             # raise Exception("Timeout. No reply to CAN bus command message")
             return -1, None
 
         Command = InMsg.data[0]
-        Status, InData, Value = self.ParseInMsg(InMsg, CommandStr)
+        Status, InData, Value = self.ParseInMsg(InMsg, CommandStrExt)
 
-        if Command != self.CommandDict[CommandStr]["CommandByte"]:
+        if Command != self.CommandDict[CommandStrExt]["CommandByte"]:
             # raise Exception("Error. Reply message comes from a different command")
             return -1, None
 
@@ -185,11 +189,18 @@ class BiDAQBoard:
             # raise Exception("Error. Reply message comes from a different ID")
             return -1, None
 
-        log.debug("Function: CheckReply - Status: {} - InData: {} - Value: {}".format(Status, InData, Value))
+        log.debug("CheckReply - Status: {} - InData: {} - Value: {}".format(Status, InData, Value))
 
         Status = self.CheckStatus(Status)
 
-        log.debug("Function: CheckReply - Status: {}".format(Status))
+        if Status < 0:
+            ErrString = "CheckReply - Command: {}".format(CommandStr)
+            if Status == -1:
+                log.warning(ErrString)
+            if Status == -2:
+                log.error(ErrString)
+
+        log.debug("CheckReply - Status: {}".format(Status))
 
         return Status, Value
 
@@ -214,7 +225,7 @@ class BiDAQBoard:
                 Status = -1
                 pass
 
-        log.debug("Function: Wake - Status: {} - Cnt: {}".format(Status, i + 1))
+        log.debug("Wake - Status: {} - Cnt: {}".format(Status, i + 1))
 
         # Return status code and number of iterations
         return Status, i + 1
