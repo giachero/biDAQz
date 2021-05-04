@@ -151,10 +151,10 @@ class BiDAQ:
                     Freq = Line[4]
                     log.info(
                         "SetChannelConfig - Brd: {}, Ch: {} - Input: {}, Enable: {}, Frequency: {}".format(Brd,
-                                                                                                              Channel,
-                                                                                                              Input,
-                                                                                                              Enable,
-                                                                                                              Freq))
+                                                                                                           Channel,
+                                                                                                           Input,
+                                                                                                           Enable,
+                                                                                                           Freq))
                     BrdIdx = self.FindBoardIdx(Brd)
                     Status, Value = self.Board[BrdIdx].WriteFilterSettings(Channel, Freq, Enable, Input)
                     if Status < 0:
@@ -453,7 +453,7 @@ def __MainFunction():
 
     Parser.set_defaults(FilterEnable=True)
 
-    Parser.add_option("-I", "--input-connection", dest="InputConnection", type=int, default = 0,
+    Parser.add_option("-I", "--input-connection", dest="InputConnection", type=int, default=0,
                       help="select filter input connection (0=conn, 1=gnd, 2=vrefp, 3=vrefn", metavar="VAL")
 
     Parser.add_option("-F", "--daq-frequency", dest="DaqFreq", type=int, default=1000,
