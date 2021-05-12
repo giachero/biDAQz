@@ -235,8 +235,8 @@ class BiDAQBoard:
         Status, Value = self.ReadLatestHWRevision()
         if Status == 0:
             self.LatestHwRev = Value[0]
-            if self.LatestHwRev:
-                self.WriteADCRefBufferEnable(0, 0)
+#            if self.LatestHwRev:
+#                self.WriteADCRefBufferEnable(0, 0)
         else:
             self.LatestHwRev = -1
         return 0
