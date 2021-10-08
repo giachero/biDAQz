@@ -252,7 +252,7 @@ class BiDAQ:
 
     # Start DAQ
     def StartDaq(self, IpAdrDst, UdpPortDst, Frequency, SamplesPerPacket=180, AdcParallelReadout=True,
-                 DropTimestamp=True, RTPPayloadType=20):
+                 DropTimestamp=True, RTPPayloadType=20, BoardList=None):
         """
         Start the DAQ.
 
@@ -270,6 +270,8 @@ class BiDAQ:
         :type DropTimestamp: bool
         :param RTPPayloadType: Set RTP payload type header field.
         :type RTPPayloadType: int
+        :param BoardList: Set list of boards to be started (None starts all).
+        :type BoardList: list or tuple
         :return: Return status (a negative value means error).
         :rtype: int
         """
@@ -288,7 +290,12 @@ class BiDAQ:
             log.warning("DAQ freq is too high")
             return -1
 
-        for Brd in range(len(self.Board)):
+        if BoardList is None:
+            BoardListCurr = range(len(self.Board))
+        else:
+            BoardListCurr = BoardList
+
+        for Brd in BoardListCurr:
             Status, Value = self.Board[Brd].WriteADCMode(AdcParallelReadout + 1)
             if Status < 0:
                 log.warning("Warning. WriteADCMode - Brd: {}, Status: {}, Value: {}".format(Brd, Status, Value))
@@ -301,32 +308,42 @@ class BiDAQ:
         # Setup the UDP packet creator with own and destination addresses
         self.FPGA.UdpStreamer.SetUdpStreamEnable(0)
         self.FPGA.UdpStreamer.AutoSetUdpStreamSourAddr()
-        # self.FPGA.UdpStreamer.SetUdpStreamDestMac(MacAdrDst)
         self.FPGA.UdpStreamer.SetUdpStreamDestIp(IpAdrDst)
         self.FPGA.UdpStreamer.AutoSetUdpStreamDestMac()
         self.FPGA.UdpStreamer.SetUdpStreamDestPort(UdpPortDst)
         self.FPGA.UdpStreamer.SetUdpStreamSourPort(UdpPortDst)
         self.FPGA.UdpStreamer.SetUdpStreamEnable(1)
 
-        # Enable the SPI block
-        self.FPGA.BoardControl.SetADCMode(AdcParallelReadout)
-        self.FPGA.BoardControl.SetEnable(1)
+        for Brd in BoardListCurr:
+            # Enable the SPI block
+            self.FPGA.BoardControl.SetADCMode(AdcParallelReadout, Brd)
+            self.FPGA.BoardControl.SetEnable(1, Brd)
 
-        # Setup the RTP packet creator
-        self.FPGA.DataPacketizer.SetDropTimestamp(DropTimestamp)
-        self.FPGA.DataPacketizer.SetPacketSamples(SamplesPerPacket)
-        self.FPGA.DataPacketizer.SetRTPPayloadType(RTPPayloadType)
-        self.FPGA.DataPacketizer.SetPayloadHeader(self.FPGA.SyncGenerator.GetDivider(1) + 1)
-        self.FPGA.DataPacketizer.SetEnable(1)
+            # Setup the RTP packet creator
+            self.FPGA.DataPacketizer.SetDropTimestamp(DropTimestamp, Brd)
+            self.FPGA.DataPacketizer.SetPacketSamples(SamplesPerPacket, Brd)
+            Status, LatestHWRevision = self.Board[Brd].ReadLatestHWRevision()
+            if Status < 0:
+                log.warning("Warning. ReadLatestHWRevision - Brd: {}, Status: {}".format(Brd, Status))
+                return Status
+            Status, FilterEnable = self.Board[Brd].ReadFilterEnable(1)
+            if Status < 0:
+                log.warning("Warning. ReadFilterEnable - Brd: {}, Status: {}".format(Brd, Status))
+                return Status
+            RTPPayloadTypeTmp = (RTPPayloadType & 0xFC) | (LatestHWRevision[0] << 1) | (FilterEnable[0])
+            self.FPGA.DataPacketizer.SetRTPPayloadType(RTPPayloadTypeTmp, True, Brd)
+            self.FPGA.DataPacketizer.SetPayloadHeader(self.FPGA.SyncGenerator.GetDivider(Brd), Brd)
+            self.FPGA.DataPacketizer.SetEnable(1, Brd)
 
         # General enable (this is obsolete)
         self.FPGA.GeneralEnable.SetEnable(1)
 
         # Setup the sync generator block
-        if self.FPGA.SysId.GetFwRevision() > 4:
-            self.FPGA.SyncGenerator.SetTimestampResetValue(0xFFFFFFFF)
-        self.FPGA.SyncGenerator.Reset()
-        self.FPGA.SyncGenerator.SetEnable(1)
+        for Brd in BoardListCurr:
+            if self.FPGA.SysId.GetFwRevision() > 4:
+                self.FPGA.SyncGenerator.SetTimestampResetValue(0xFFFFFFFF, Brd)
+            self.FPGA.SyncGenerator.Reset(Brd)
+            self.FPGA.SyncGenerator.SetEnable(1, Brd)
 
         # Start the acquisition by applying the sync clock, in common to all boards
         self.FPGA.ClockRefGenerator.SetEnable(1)
@@ -430,7 +447,7 @@ def __MainFunction():
 
     Parser = optparse.OptionParser()
 
-    Parser.set_usage("BiDAQ.py [options] start|stop")
+    Parser.set_usage("BiDAQ.py [options] start|stop|getboardlist|getboardnum")
 
     Parser.add_option("-c", "--crate", dest="Crate", type=int, default=None,
                       help="select crate number", metavar="CRATE")
@@ -508,8 +525,8 @@ def __MainFunction():
     # Check for sane arguments
     if len(Args) != 1:
         Parser.error("incorrect number of arguments")
-    if str.lower(Args[0]) not in ('start', 'stop'):
-        Parser.error("invalid argument (only start and stop are allowed)")
+    if str.lower(Args[0]) not in ('start', 'stop', 'getboardlist', 'getboardnum'):
+        Parser.error("invalid argument (start|stop|getboardlist|getboardnum)")
 
     LogLevel = logging.WARNING
     if Options.Verbose:
@@ -559,6 +576,15 @@ def __MainFunction():
             logging.error("Error: Can't start DAQ")
         else:
             logging.info("Done")
+
+    if str.lower(Args[0]) == 'getboardlist':
+        BoardNumList = list()
+        for BrdIdx in range(len(Daq.Board)):
+            BoardNumList.append(Daq.Board[BrdIdx].Board)
+        Status = BoardNumList
+
+    if str.lower(Args[0]) == 'getboardnum':
+        Status = len(Daq.Board)
 
     # Required by MATLAB to check the return status
     print(Status)

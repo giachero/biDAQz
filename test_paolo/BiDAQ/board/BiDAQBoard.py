@@ -235,8 +235,12 @@ class BiDAQBoard:
         Status, Value = self.ReadLatestHWRevision()
         if Status == 0:
             self.LatestHwRev = Value[0]
+# Test commands to disable or enable reference buffers on the two boards
 #            if self.LatestHwRev:
-#                self.WriteADCRefBufferEnable(0, 0)
+#                if self.Board == 1:
+#                    self.WriteADCRefBufferEnable(0, 0)
+#                #if self.Board == 0:
+#                #    self.WriteADCRefBufferEnable(0, 1, 1)
         else:
             self.LatestHwRev = -1
         return 0
@@ -434,8 +438,9 @@ class BiDAQBoard:
         return self.SendCommand("ADC_BUFFERS_READ", 0, Channel, self.DefaultTimeout, Queue)
 
     # Write ADC reference buffer enable
-    def WriteADCRefBufferEnable(self, Channel, BufferEnable, Queue=False):
-        return self.SendCommand("ADC_REF_BUFFERS_WRITE", int(BufferEnable) << 24, Channel, self.DefaultTimeout, Queue)
+    def WriteADCRefBufferEnable(self, Channel, BufferEnable, OnlyPosBuffer=0, Queue=False):
+        return self.SendCommand("ADC_REF_BUFFERS_WRITE", (int(BufferEnable) << 24) | int(OnlyPosBuffer) << 16, Channel,
+                                self.DefaultTimeout, Queue)
 
     # Read ADC reference buffer enable
     def ReadADCRefBufferEnable(self, Channel, Queue=False):
