@@ -97,13 +97,16 @@ class BiDAQ:
         logging.info("Starting BoardList: {}".format(BoardList))
 
         for CurrentBoard in self.FPGA.BoardList:
-            Board.append(BiDAQBoard.BiDAQBoard(self.Crate, CurrentBoard + 8*self.Half))
+            Board.append(BiDAQBoard.BiDAQBoard(self.Crate & 0xF, CurrentBoard + 8*self.Half))
             if Board[-1].NOP()[0] < 0:
                 Board.pop()
                 BoardList.remove(CurrentBoard)
             else:
                 Board[-1].InitBoard()
         self.BoardList = BoardList
+
+        if len(BoardList) is 0:
+            logging.warning("No boards found during initialization")
 
         logging.info("Final BoardList: {}".format(BoardList))
 
@@ -289,7 +292,7 @@ class BiDAQ:
             log.warning("Couldn't set DAQ frequency")
             return Status
         if AdcFreq < SyncFreq * 1.04:
-            log.warning("DAQ freq is too high")
+            log.warning("DAQ freq is too high (AdcFreq: {}, SyncFreq: {})".format(AdcFreq, SyncFreq))
             return -1
 
         if BoardList is None:
