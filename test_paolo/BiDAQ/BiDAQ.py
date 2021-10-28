@@ -252,7 +252,7 @@ class BiDAQ:
 
     # Start DAQ
     def StartDaq(self, IpAdrDst, UdpPortDst, Frequency, SamplesPerPacket=180, AdcParallelReadout=True,
-                 DropTimestamp=True, RTPPayloadType=20, BoardList=None):
+                 DropTimestamp=True, RTPPayloadType=20, BoardList=None, Gpio=False):
         """
         Start the DAQ.
 
@@ -271,7 +271,9 @@ class BiDAQ:
         :param RTPPayloadType: Set RTP payload type header field.
         :type RTPPayloadType: int
         :param BoardList: Set list of boards to be started (None starts all).
-        :type BoardList: list or tuple
+        :type BoardList: list or tuple or None
+        :param Gpio: Set GPIO enable
+        :type Gpio: bool
         :return: Return status (a negative value means error).
         :rtype: int
         """
@@ -291,7 +293,7 @@ class BiDAQ:
             return -1
 
         if BoardList is None:
-            BoardListCurr = range(len(self.Board))
+            BoardListCurr = list(range(len(self.Board)))
         else:
             BoardListCurr = BoardList
 
@@ -319,18 +321,28 @@ class BiDAQ:
             self.FPGA.BoardControl.SetADCMode(AdcParallelReadout, Brd)
             self.FPGA.BoardControl.SetEnable(1, Brd)
 
+        BoardListCurrGpio = BoardListCurr.copy()
+        if Gpio:
+            BoardListCurrGpio.append(self.FPGA.Gpio)
+
+        for Brd in BoardListCurrGpio:
+
             # Setup the RTP packet creator
             self.FPGA.DataPacketizer.SetDropTimestamp(DropTimestamp, Brd)
             self.FPGA.DataPacketizer.SetPacketSamples(SamplesPerPacket, Brd)
-            Status, LatestHWRevision = self.Board[Brd].ReadLatestHWRevision()
-            if Status < 0:
-                log.warning("Warning. ReadLatestHWRevision - Brd: {}, Status: {}".format(Brd, Status))
-                return Status
-            Status, FilterEnable = self.Board[Brd].ReadFilterEnable(1)
-            if Status < 0:
-                log.warning("Warning. ReadFilterEnable - Brd: {}, Status: {}".format(Brd, Status))
-                return Status
-            RTPPayloadTypeTmp = (RTPPayloadType & 0xFC) | (LatestHWRevision[0] << 1) | (FilterEnable[0])
+
+            RTPPayloadTypeTmp = (RTPPayloadType & 0xFC)
+            if not Gpio or Brd < self.FPGA.Gpio:
+                Status, LatestHWRevision = self.Board[Brd].ReadLatestHWRevision()
+                if Status < 0:
+                    log.warning("Warning. ReadLatestHWRevision - Brd: {}, Status: {}".format(Brd, Status))
+                    return Status
+                Status, FilterEnable = self.Board[Brd].ReadFilterEnable(1)
+                if Status < 0:
+                    log.warning("Warning. ReadFilterEnable - Brd: {}, Status: {}".format(Brd, Status))
+                    return Status
+                RTPPayloadTypeTmp = RTPPayloadTypeTmp | (LatestHWRevision[0] << 1) | (FilterEnable[0])
+
             self.FPGA.DataPacketizer.SetRTPPayloadType(RTPPayloadTypeTmp, True, Brd)
             self.FPGA.DataPacketizer.SetPayloadHeader(self.FPGA.SyncGenerator.GetDivider(Brd), Brd)
             self.FPGA.DataPacketizer.SetEnable(1, Brd)
@@ -339,7 +351,7 @@ class BiDAQ:
         self.FPGA.GeneralEnable.SetEnable(1)
 
         # Setup the sync generator block
-        for Brd in BoardListCurr:
+        for Brd in BoardListCurrGpio:
             if self.FPGA.SysId.GetFwRevision() > 4:
                 self.FPGA.SyncGenerator.SetTimestampResetValue(0xFFFFFFFF, Brd)
             self.FPGA.SyncGenerator.Reset(Brd)
@@ -571,7 +583,7 @@ def __MainFunction():
         logging.info("Starting DAQ...")
         Status = Daq.StartDaq(Options.IpAdrDst, Options.UdpPortDst, Options.DaqFreq,
                               Options.SamplesPerPacket, Options.ADCParallelReadout, Options.DropTimestamp,
-                              Options.RTPPayloadType)
+                              Options.RTPPayloadType, None, Options.Gpio)
         if Status < 0:
             logging.error("Error: Can't start DAQ")
         else:

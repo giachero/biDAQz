@@ -94,6 +94,8 @@ class DataPacketizer:
 
         if BoardList is None:
             BoardList = self.FpgaReg.BoardList
+            if self.FpgaReg.Gpio is not None:
+                BoardList.append(self.FpgaReg.Gpio)
 
         if ChannelList is None:
             ChannelList = list(range(0, 12))
@@ -106,7 +108,11 @@ class DataPacketizer:
             RetDict["Board_{}".format(Brd)]["DataPacketizer"] = dict()
             RetDict["Board_{}".format(Brd)]["DataPacketizer"]["SamplesSent"] = self.GetDataCount(Brd)
             RetDict["Board_{}".format(Brd)]["DataPacketizer"]["PacketsSent"] = self.GetPacketCount(Brd)
-            for Ch in ChannelList:
+            if Brd == self.FpgaReg.Gpio:
+                ChannelListCurr = list(range(0, self.FpgaReg.Gpio))
+            else:
+                ChannelListCurr = ChannelList
+            for Ch in ChannelListCurr:
                 RetDict["Board_{}".format(Brd)]["DataPacketizer"]["Channel_{}".format(Ch)] = dict()
                 RetDict["Board_{}".format(Brd)]["DataPacketizer"]["Channel_{}".format(Ch)]["Channel"] = Ch
                 RetDict["Board_{}".format(Brd)]["DataPacketizer"]["Channel_{}".format(Ch)]["DroppedSamples"] = \
