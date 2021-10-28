@@ -80,7 +80,7 @@ class BiDAQ:
         # Scan the boards and check if they reply to a NOP command
         self.Board, self.BoardList = self.InitBoards()
 
-        self.FPGA.InitRtpSourceIds(0xB1DAC, self.Crate, self.Half)
+        self.FPGA.InitRtpSourceIds(0xBDAC, self.Crate, self.Half)
 
     def InitBoards(self):
         """

@@ -75,11 +75,12 @@ class BiDAQFPGA:
     def InitRtpSourceIds(self, Prefix, Crate, Half):
 
         for Brd in self.BoardList:
-            Source = ((Prefix << 12) & 0xFFFFF000) | ((Crate << 8) & 0xF00) | (((Brd + 8*Half) << 4) & 0xF0)
+            Source = ((Prefix << 16) & 0xFFFF0000) | ((Crate << 8) & 0xFF00) | (((Brd + 8*Half) << 4) & 0xF0)
             self.DataPacketizer.SetRTPSource(Source, Brd)
+
         if self.Gpio is not None:
-            self.DataPacketizer.SetRTPSource(((Prefix << 12) & 0xFFFFF000) | ((Crate << 8) & 0xF00)
-                                             | (((8*Half) << 4) & 0xF0) | 0xF, self.Gpio)
+            Source = ((Prefix << 16) & 0xFFFFF000) | ((Crate << 8) & 0xFF00) | (((8*Half) << 4) & 0xF0) | 0xF
+            self.DataPacketizer.SetRTPSource(Source, self.Gpio)
 
     def SetClockGeneratorMasterOrSlave(self, Master):
 
