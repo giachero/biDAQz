@@ -25,10 +25,10 @@ class PortExpander:
         self.PinForbidden = (0, 1, 2, 3, 4)
 
     def GetCrateId(self):
-        return (self.Chip[0].getPortInput(0) >> 1) & 0xf
+        return self.Chip[0].getPortInput(0) >> 1
 
     def GetCrateHalf(self):
-        return (self.Chip[0].getPortInput(0) & 1)
+        return self.Chip[0].getPortInput(0) & 1
 
     def CheckAllowed(self, Port, Pin):
         if self.ChipMapping[Port] in self.ChipForbidden and self.PortMapping[Port] in self.PortForbidden \
