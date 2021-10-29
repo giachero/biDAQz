@@ -124,3 +124,9 @@ class BiDAQFPGA:
         MonitorDict = reduce(self.__merge, [DP, SG, US, TM, HTM, Fifo])
 
         return MonitorDict
+
+    def EnableExternalGpioWhileNotAcquiring(self):
+
+        self.BoardControl.SetADCMode(1)
+        self.GpioControl.SetCaptureEnable(1)
+        self.GpioControl.SetEnable(1)
