@@ -240,18 +240,26 @@ class BiDAQ:
 
         return Status, SyncFreq, AdcFreq
 
-    def EnableGpio(self, VirtualGpioNumber=0):
+    def EnableGpio(self, VirtualGpioNumber=0, ADCParallelReadout=True):
         """
         Enable GPIO capture. The optional argument allow to enable also up to 7 24-bit virtual GPIOs.
 
         :param VirtualGpioNumber: Number of virtual GPIOs to be enabled (0-7).
         :type VirtualGpioNumber: int
+        :param ADCParallelReadout: Flag to set ADC parallel readout on all boards
+        :type ADCParallelReadout: bool
         """
 
         self.FPGA.GpioControl.SetCaptureEnable(1)
         self.FPGA.GpioControl.SetEnable(1)
         for i in list(range(1, VirtualGpioNumber + 1)):
             self.FPGA.GpioControl.SetVirtualGpioEnable(1, i)
+
+        # If parallel readout is enabled, then enable it on all boards, otherwise only few GPIOs pins corresponding to
+        # the active boards will be used as GPIOs (parallel/serial setting takes precedence even if some board is not
+        # enabled for DAQ)
+        if ADCParallelReadout:
+            self.FPGA.BoardControl.SetADCModeParallel()
 
     # Start DAQ
     def StartDaq(self, IpAdrDst, UdpPortDst, Frequency, SamplesPerPacket=180, AdcParallelReadout=True,
@@ -581,7 +589,7 @@ def __MainFunction():
                 Daq.FPGA.SetSlave()
 
         if Options.Gpio:
-            Daq.EnableGpio(Options.VirtualGpio)
+            Daq.EnableGpio(Options.VirtualGpio, Options.ADCParallelReadout)
 
         logging.info("Starting DAQ...")
         Status = Daq.StartDaq(Options.IpAdrDst, Options.UdpPortDst, Options.DaqFreq,
