@@ -304,18 +304,19 @@ class BiDAQ:
             return -1
 
         if BoardList is None:
-            BoardListCurr = list(range(len(self.Board)))
+            BoardListCurr = self.BoardList  # list(range(len(self.Board)))
         else:
             BoardListCurr = BoardList
 
         for Brd in BoardListCurr:
-            Status, Value = self.Board[Brd].WriteADCMode(AdcParallelReadout + 1)
+            BrdIdx = self.FindBoardIdx(Brd)
+            Status, Value = self.Board[BrdIdx].WriteADCMode(AdcParallelReadout + 1)
             if Status < 0:
-                log.warning("Warning. WriteADCMode - Brd: {}, Status: {}, Value: {}".format(Brd, Status, Value))
+                log.warning("Warning. WriteADCMode - Brd: {}, Status: {}, Value: {}".format(BrdIdx, Status, Value))
                 return Status
-            Status, Value = self.Board[Brd].StartDAQ(0)
+            Status, Value = self.Board[BrdIdx].StartDAQ(0)
             if Status < 0:
-                log.warning("Warning. StartDAQ - Brd: {}, Status: {}, Value: {}".format(Brd, Status, Value))
+                log.warning("Warning. StartDAQ - Brd: {}, Status: {}, Value: {}".format(BrdIdx, Status, Value))
                 return Status
 
         # Setup the UDP packet creator with own and destination addresses
@@ -344,13 +345,14 @@ class BiDAQ:
 
             RTPPayloadTypeTmp = (RTPPayloadType & 0xFC)
             if not Gpio or Brd < self.FPGA.Gpio:
-                Status, LatestHWRevision = self.Board[Brd].ReadLatestHWRevision()
+                BrdIdx = self.FindBoardIdx(Brd)
+                Status, LatestHWRevision = self.Board[BrdIdx].ReadLatestHWRevision()
                 if Status < 0:
-                    log.warning("Warning. ReadLatestHWRevision - Brd: {}, Status: {}".format(Brd, Status))
+                    log.warning("Warning. ReadLatestHWRevision - Brd: {}, Status: {}".format(BrdIdx, Status))
                     return Status
-                Status, FilterEnable = self.Board[Brd].ReadFilterEnable(1)
+                Status, FilterEnable = self.Board[BrdIdx].ReadFilterEnable(1)
                 if Status < 0:
-                    log.warning("Warning. ReadFilterEnable - Brd: {}, Status: {}".format(Brd, Status))
+                    log.warning("Warning. ReadFilterEnable - Brd: {}, Status: {}".format(BrdIdx, Status))
                     return Status
                 RTPPayloadTypeTmp = RTPPayloadTypeTmp | (LatestHWRevision[0] << 1) | (FilterEnable[0])
 
@@ -409,6 +411,18 @@ class BiDAQ:
             return -1
 
         return 0
+
+    @staticmethod
+    def SetLogLevelDebug():
+        logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
+
+    @staticmethod
+    def SetLogLevelInfo():
+        logging.basicConfig(stream=sys.stderr, level=logging.INFO)
+
+    @staticmethod
+    def SetLogLevelWarning():
+        logging.basicConfig(stream=sys.stderr, level=logging.WARNING)
 
     def GetFPGAMonitorRegisters(self):
         """

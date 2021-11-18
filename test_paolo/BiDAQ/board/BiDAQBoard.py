@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 import logging
-
+import time
 import can
 
 from . import BiDAQCommands
@@ -60,6 +60,7 @@ class BiDAQBoard:
         OutMsg = can.Message(data=OutData)
         OutMsg.is_extended_id = True
         OutMsg.arbitration_id = self.ID + Channel
+        OutMsg.timestamp = time.time()
 
         log.debug("SendData - W: {}".format(OutMsg))
 
@@ -207,16 +208,19 @@ class BiDAQBoard:
     # Wake board from powerdown. The function waits a maximum of 0.1 s
     def Wake(self):
 
+        TimeoutNOP = 0
+        TimeoutReply = 0.01
         Status = 0
         i = 0
+        log.debug("Wake - TimeoutNOP: {}, TimeoutReply: {}".format(TimeoutNOP, TimeoutReply))
         # Retry 10 times with 0.01 s timeout for each command
         for i in range(0, 10):
             # Send command without timeout
-            self.SendData(self.CommandDict["CAN_CMD_NOP"]["CommandByte"], 0, 0, 0)
+            self.SendData(self.CommandDict["CAN_CMD_NOP"]["CommandByte"], 0, 0, TimeoutNOP)
             # noinspection PyBroadException
             try:
                 # Check the reply
-                Status, Value = self.CheckReply("NOP", 0, 0.01)
+                Status, Value = self.CheckReply("NOP", 0, TimeoutReply)
                 # If there is a reply, then break the cycle
                 if Status == 0:
                     break
@@ -320,7 +324,7 @@ class BiDAQBoard:
     # Write all the filter settings (cut-off frequency, filter enable, input connection)
     def WriteFilterSettings(self, Channel, Frequency, Enable, Grounded, Queue=False):
         Value = (Frequency << 16) + (int(Enable) << 8) + int(Grounded)
-        return self.SendCommand("FREQUENCY_AND_ENABLE", Value, Channel, self.DefaultTimeout, Queue)
+        return self.SendCommand("FREQUENCY_AND_ENABLE", Value, Channel, 0.5, Queue)
 
     # Write trimmer value
     def WriteTrimmer(self, Channel, TrimmerNumber, Value, Queue=False):
