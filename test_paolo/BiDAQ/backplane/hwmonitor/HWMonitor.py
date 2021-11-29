@@ -1,3 +1,6 @@
+import logging
+import sys
+
 try:
     from .sensors import sensors
 except ImportError:
@@ -9,18 +12,22 @@ class HWMonitor:
     # Class constructor
     def __init__(self, VoltageThreshold=0.1, TempThreshold=80, FanThreshold=0):
 
-        sensors.init()
-        for Chip in sensors.iter_detected_chips():
-            if str(Chip) == 'lm96080-i2c-0-29':
-                self.HWMon = Chip
-                break
+        if 'sensors' in sys.modules:
+            sensors.init()
+            for Chip in sensors.iter_detected_chips():
+                if str(Chip) == 'lm96080-i2c-0-29':
+                    self.HWMon = Chip
+                    break
 
-        self.VoltageThreshold = VoltageThreshold
-        self.TempThreshold = TempThreshold
-        self.FanThreshold = FanThreshold
+            self.VoltageThreshold = VoltageThreshold
+            self.TempThreshold = TempThreshold
+            self.FanThreshold = FanThreshold
+        else:
+            logging.warning("No sensors module found")
 
     def __del__(self):
-        sensors.cleanup()
+        if 'sensors' in sys.modules:
+            sensors.cleanup()
 
     def ReadSensors(self):
 
