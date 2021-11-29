@@ -80,7 +80,16 @@ class BiDAQ:
         # Scan the boards and check if they reply to a NOP command
         self.Board, self.BoardList = self.InitBoards()
 
+        # Disable powerdown for all boards
+        if self.SetPowerdownDisableAll() < 0:
+            logging.warning("Can't disable powerdown on boards")
+
+        # Initialize RTP source fields
         self.FPGA.InitRtpSourceIds(0xBDAC, self.Crate, self.Half)
+
+    def __del__(self):
+        if self.SetPowerdownEnableAll() < 0:
+            logging.warning("Can't re-enable powerdown on boards")
 
     def InitBoards(self):
         """
@@ -127,6 +136,24 @@ class BiDAQ:
                 return BrdIdx
 
         return None
+
+    def SetPowerdownAll(self, Enable):
+
+        Ret = 0
+        if hasattr(self, 'BoardList') and hasattr(self, 'Board'):
+            for Brd in self.BoardList:
+                BrdIdx = self.FindBoardIdx(Brd)
+                Status, Value = self.Board[BrdIdx].WritePowerdown(int(Enable), 0)
+                if Status < 0:
+                    warnings.warn("Warning. WritePowerdown - Brd: {}, Status: {}, Value: {}".format(Brd, Status, Value))
+                    Ret = Status
+        return Ret
+
+    def SetPowerdownEnableAll(self):
+        return self.SetPowerdownAll(1)
+
+    def SetPowerdownDisableAll(self):
+        return self.SetPowerdownAll(0)
 
     def SetChannelConfigList(self, ConfigList):
         """
@@ -360,6 +387,10 @@ class BiDAQ:
             self.FPGA.DataPacketizer.SetPayloadHeader(self.FPGA.SyncGenerator.GetDivider(Brd), Brd)
             self.FPGA.DataPacketizer.SetEnable(1, Brd)
 
+        # Powerdown all boards
+        if self.SetPowerdownEnableAll():
+            return -1
+
         # General enable (this is obsolete)
         self.FPGA.GeneralEnable.SetEnable(1)
 
@@ -396,8 +427,12 @@ class BiDAQ:
             self.FPGA.GpioControl.SetVirtualGpioEnable(0)
         Status = 0
 
-        for Brd in range(0, len(self.Board)):
-            Status, Value = self.Board[Brd].StopDAQ(0)
+        if self.SetPowerdownDisableAll():
+            return -1
+
+        for Brd in self.BoardList:
+            BrdIdx = self.FindBoardIdx(Brd)
+            Status, Value = self.Board[BrdIdx].StopDAQ(0)
             if Status < 0:
                 warnings.warn("Warning. StopDAQ - Brd: {}, Status: {}, Value: {}".format(Brd, Status, Value))
                 return -1
@@ -423,6 +458,12 @@ class BiDAQ:
     @staticmethod
     def SetLogLevelWarning():
         logging.basicConfig(stream=sys.stderr, level=logging.WARNING)
+
+    def TestBoards(self):
+        for Brd in self.BoardList: #range(0, 1):  # self.BoardList:
+            BrdIdx = self.FindBoardIdx(Brd)
+            Status = self.Board[BrdIdx].TestBoard(True)
+            print("FINAL STATUS: ", Status)
 
     def GetFPGAMonitorRegisters(self):
         """

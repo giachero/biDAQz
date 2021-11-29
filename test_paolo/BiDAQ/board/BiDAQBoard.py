@@ -3,6 +3,7 @@
 import logging
 import time
 import can
+import struct
 
 from . import BiDAQCommands
 
@@ -25,6 +26,10 @@ def _CheckChannel(Channel):
         return -1
 
 
+def _IntToFloat(Val):
+    return struct.unpack('>f', struct.pack('>l', Val))[0]
+
+
 class BiDAQBoard:
     DefaultTimeout = 0.1
 
@@ -38,6 +43,8 @@ class BiDAQBoard:
         self.CANReader = can.BufferedReader()
         self.CANNotifier = can.Notifier(self.CANBus, [self.CANReader])
         self.LatestHwRev = -1
+        self.ADCFullRange = 0
+        self.FilterGain = 1
 
         self.CANBus.set_filters([{"can_id": self.ID, "can_mask": 0x1FFFFFF0, "extended": True}])
 
@@ -239,6 +246,12 @@ class BiDAQBoard:
         Status, Value = self.ReadLatestHWRevision()
         if Status == 0:
             self.LatestHwRev = Value[0]
+            if self.LatestHwRev:
+                self.ADCFullRange = 5/0.4
+                self.FilterGain = ((2.2+3.6)/3.6)/2
+            else:
+                self.ADCFullRange = 4.096/0.4
+                self.FilterGain = 2/2
 # Test commands to disable or enable reference buffers on the two boards
 #            if self.LatestHwRev:
 #                if self.Board == 1:
@@ -247,6 +260,8 @@ class BiDAQBoard:
 #                #    self.WriteADCRefBufferEnable(0, 1, 1)
         else:
             self.LatestHwRev = -1
+            self.ADCFullRange = 0
+            self.FilterGain = 1
         return 0
 
     # No OPeration (NOP) command
@@ -559,3 +574,247 @@ class BiDAQBoard:
 
     def ReadErrorMode(self, Queue=False):
         return self.SendCommand("ERROR_INSTANT_MODE_READ", 0, 0, self.DefaultTimeout, Queue)
+
+    def TestBoard(self, Verbose=False):
+
+        TestStatus = 0
+        TestFailed = list()
+
+        PreviousLogLevel = logging.root.level
+        if Verbose:
+            log.setLevel(logging.INFO)
+
+        log.info("Board test - Started - Brd {}, Crate: {}, ID: 0x{:08X}".format(self.Board, self.Crate, self.ID))
+
+        log.info("LatestHwRevision: {}".format(self.LatestHwRev))
+
+        # Status, Value = self.ReadPowerdown()
+        # if Status or (Value is None):
+        #     log.error("Error when reading powerdown - Status: {}".format(Status))
+        #     return -1
+        # PowerdownSetting = Value[0]
+        # Status, Value = self.WritePowerdown(False, False)
+        # if Status or (Value is None):
+        #     log.error("Error when writing powerdown - Status: {}".format(Status))
+        #     return -1
+
+        Status, Value = self.ReadErrorCounter()
+        if Status or (Value is None):
+            log.error("Error when reading error counter - Status: {}".format(Status))
+            return -1
+        ErrorCnt = Value[0]
+        log.info("Error counter: {}".format(ErrorCnt))
+        if ErrorCnt > 0:
+            log.warning("Error counter at beginning of test already higher than zero ({})".format(ErrorCnt))
+            self.ResetErrorCounter()
+            log.info("Error counter reset to 0")
+            TestStatus = TestStatus + 1
+            TestFailed.append("Error counter")
+
+        log.info("Power supply test - Started")
+        TestStatusNew = TestStatus
+        if self.LatestHwRev > 0:
+            ExpSupply = (
+                (5, 14), (4.8, 5.2), (3.2, 3.4), (5.05, 5.25), (12, 14), (-14, -12), (11.8, 12.3), (-12.3, -11.8))
+        else:
+            ExpSupply = (
+                (5, 14), (4.8, 5.2), (3.2, 3.4), (4.9, 5.1), (12, 14), (-14, -12), (11.8, 12.3), (-12.3, -11.8))
+        for i in range(0, 8):
+            Status, Value = self.ReadPowerSupply(i)
+            if Status or (Value is None):
+                log.error("Power supply test - Error during read - Status: {}".format(Status))
+                return -1
+            Value = Value[0]
+            MsgStr = "PS{}: {:7} V".format(i, Value)
+            if ExpSupply[i][0] < Value < ExpSupply[i][1]:
+                log.info(MsgStr + " - OK")
+            else:
+                log.warning(MsgStr + " - ERROR - Thr low: {}, Thr hi: {}".format(ExpSupply[i][0], ExpSupply[i][1]))
+                TestStatusNew = TestStatus + 1
+                TestFailed.append("Power supply {}".format(i))
+        ErrorCntTmp = self.CheckErrorCounter(ErrorCnt)
+        if ErrorCntTmp >= 0:
+            if ErrorCntTmp > ErrorCnt or TestStatusNew != TestStatus:
+                log.warning("Power supply test - Not passed")
+            else:
+                log.info("Power supply test - Passed")
+            ErrorCnt = ErrorCntTmp
+
+        log.info("Temperature test - Started")
+        TestStatusNew = TestStatus
+        Status, Value = self.ReadTemperature()
+        if Status or (Value is None):
+            log.error("Temperature test - Error during read - Status: {}".format(Status))
+            return -1
+        if 20 < Value[0] < 45:
+            log.info("Temperature: {} degC - OK".format(Value[0]))
+        else:
+            log.warning("Temperature: {} degC - ERROR".format(Value[0]))
+            TestStatus = TestStatus + 1
+            TestFailed.append("Memory")
+        ErrorCntTmp = self.CheckErrorCounter(ErrorCnt)
+        if ErrorCntTmp >= 0:
+            if ErrorCntTmp > ErrorCnt or TestStatusNew != TestStatus:
+                log.warning("Temperature test - Not passed")
+            else:
+                log.info("Temperature test - Passed")
+            ErrorCnt = ErrorCntTmp
+
+        log.info("Memory test - Started")
+        TestStatusNew = TestStatus
+        Status, Value = self.ReadID()
+        if Status or (Value is None):
+            log.error("Memory test - Error during read - Status: {}".format(Status))
+            return -1
+        OldID = Value[0]
+        self.WriteID(0xFEFE)
+        Status, Value = self.ReadID()
+        if Value[0] != 0xFEFE:
+            log.warning("ERROR - Wrote: 0xFEFE, read: 0x{:X}".format(Value[0]))
+            TestStatus = TestStatus + 1
+            TestFailed.append("Memory")
+        self.WriteID(OldID)
+        ErrorCntTmp = self.CheckErrorCounter(ErrorCnt)
+        if ErrorCntTmp >= 0:
+            if ErrorCntTmp > ErrorCnt or TestStatusNew != TestStatus:
+                log.warning("Memory test - Not passed")
+            else:
+                log.info("Memory test - Passed")
+            ErrorCnt = ErrorCntTmp
+
+        # log.info("Filter enable test - Started")
+        # TestStatusNew = TestStatus
+        # for i in range(1, 13):
+        #     Status, Value = self.ReadFilterEnable(i)
+        #     if Status or (Value is None):
+        #         log.error("Filter enable test - Error during read - Status: {}".format(Status))
+        #         return -1
+        #     OldValue = Value[0]
+        #     self.WriteFilterEnable(i, int(not OldValue))
+        #     Status, Value = self.ReadFilterEnable(i)
+        #     if Value[0] != int(not OldValue):
+        #         log.warning("ERROR - Wrote: {}, read: {}".format(int(not OldValue), Value[0]))
+        #         TestStatus = TestStatus + 1
+        #         TestFailed.append("Filter enable")
+        #     self.WriteFilterEnable(i, OldValue)
+        # ErrorCntTmp = self.CheckErrorCounter(ErrorCnt)
+        # if ErrorCntTmp >= 0:
+        #     if ErrorCntTmp > ErrorCnt or TestStatusNew != TestStatus:
+        #         log.warning("Filter enable test - Not passed")
+        #     else:
+        #         log.info("Filter enable test - Passed")
+        #     ErrorCnt = ErrorCntTmp
+
+        log.info("Trimmer chain test - Started")
+        TestStatusNew = TestStatus
+        for i in range(1, 13):
+            for j in range(0, 6):
+                Status, Value = self.ReadTrimmerForce(i, j)
+                if Status or (Value is None):
+                    log.error("Trimmer chain test - Error during read - Status: {}".format(Status))
+                    return -1
+                OldValue = Value[0]
+                if OldValue != 512:
+                    NewValue = 512
+                else:
+                    NewValue = 256
+                self.WriteTrimmer(i, j, NewValue)
+                Status, Value = self.ReadTrimmerForce(i, j)
+                if Value[0] != NewValue:
+                    log.warning("ERROR - Wrote: {}, read: {}".format(NewValue, Value[0]))
+                    TestStatus = TestStatus + 1
+                    TestFailed.append("Trimmer chain (channel {} trimmer {}".format(i, j))
+                self.WriteTrimmer(i, j, OldValue)
+        ErrorCntTmp = self.CheckErrorCounter(ErrorCnt)
+        if ErrorCntTmp >= 0:
+            if ErrorCntTmp > ErrorCnt or TestStatusNew != TestStatus:
+                log.warning("Trimmer chain test - Not passed")
+            else:
+                log.info("Trimmer chain test - Passed")
+            ErrorCnt = ErrorCntTmp
+
+        log.info("ADC register test - Started")
+        TestStatusNew = TestStatus
+        for i in range(1, 7):
+            Status, Value = self.ReadADCRegister(i, 0x7)
+            if Status or (Value is None):
+                log.error("ADC register test - Error during read - Status: {}".format(Status))
+                return -1
+            if Value[0] != 0x0CDE:
+                log.warning("ERROR - Expected: 0x0CDE, read: 0x{:X}".format(Value[0]))
+                TestStatus = TestStatus + 1
+                TestFailed.append("ADC register test")
+            Status, Value = self.ReadADCRegister(i, 0x3B)
+            OldValue = Value[0]
+            self.WriteADCRegister(i, 0x3B, 0x512345)
+            Status, Value = self.ReadADCRegister(i, 0x3B)
+            if Value[0] != 0x512345:
+                log.warning("ERROR - Wrote: 0x512345, read: 0x{:X}".format(Value[0]))
+                TestStatus = TestStatus + 1
+                TestFailed.append("ADC register test")
+            self.WriteADCRegister(i, 0x3B, OldValue)
+        ErrorCntTmp = self.CheckErrorCounter(ErrorCnt)
+        if ErrorCntTmp >= 0:
+            if ErrorCntTmp > ErrorCnt or TestStatusNew != TestStatus:
+                log.warning("ADC register test - Not passed")
+            else:
+                log.info("ADC register test - Passed")
+            ErrorCnt = ErrorCntTmp
+
+        log.info("Noise test - Started")
+        TestStatusNew = TestStatus
+        Duration = 1
+        self.WriteFilterSettings(0, 100, 1, 2)
+        self.AutomaticADCCalibration(0)
+        self.WriteADCFrequency(0, 1000)
+        self.WriteMeasurementEnable(0, 1)
+        self.WriteMeasurementDuration(0, Duration)
+        self.StartMeasurement(0)
+        time.sleep(Duration * 1.1)
+        for i in range(1, 13):
+            Cnt = 0
+            while Cnt < 10:
+                Status, Value = self.ReadMeasurement(i, 3)
+                if Status or (Value is None):
+                    log.error("Noise test - Error meas read - Status: {}".format(Status))
+                    return -1
+                if Value[0] == 0:
+                    break
+                else:
+                    time.sleep(Duration / 10)
+                    Cnt = Cnt + 1
+            Status, Value = self.ReadMeasurement(i, 0)
+            MeanVal = (_IntToFloat(Value[0]) / 2**23 - 1) * self.ADCFullRange * self.FilterGain
+            Status, Value = self.ReadMeasurement(i, 1)
+            RMSVal = _IntToFloat(Value[0]) / 2**23 * self.ADCFullRange * self.FilterGain
+            log.info("Channel {} - Mean: {:.2f} uV".format(i, MeanVal * 1e6))
+            log.info("Channel {} - RMS:  {:.2f} uV".format(i, RMSVal * 1e6))
+
+        ErrorCntTmp = self.CheckErrorCounter(ErrorCnt)
+        if ErrorCntTmp >= 0:
+            if ErrorCntTmp > ErrorCnt or TestStatusNew != TestStatus:
+                log.warning("ADC register test - Not passed")
+            else:
+                log.info("ADC register test - Passed")
+            ErrorCnt = ErrorCntTmp
+
+        # after testing ADC, set inputs to ground, Vref, etc and test noise by changing cutoff freq, daq speed, vref...
+
+        # Status, Value = self.WritePowerdown(PowerdownSetting, False)
+        # if Status or (Value is None):
+        #     log.error("Error when writing powerdown - Status: {}".format(Status))
+        #     return -1
+
+        log.setLevel(PreviousLogLevel)
+        return 0
+
+    def CheckErrorCounter(self, ErrorCnt):
+
+        Status, Value = self.ReadErrorCounter()
+        if Status or (Value is None):
+            log.warning("Error when reading error counter - Status: {}".format(Status))
+            return -1
+        ErrorCntTmp = Value[0]
+        if ErrorCntTmp > ErrorCnt:
+            log.warning("Errors occurred during last test - Error counter: {}".format(ErrorCntTmp))
+        return ErrorCntTmp
