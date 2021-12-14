@@ -12,7 +12,7 @@ class HWMonitor:
     # Class constructor
     def __init__(self, VoltageThreshold=0.1, TempThreshold=80, FanThreshold=0):
 
-        if 'sensors' in sys.modules:
+        if 'backplane.hwmonitor.sensors' in sys.modules:
             sensors.init()
             for Chip in sensors.iter_detected_chips():
                 if str(Chip) == 'lm96080-i2c-0-29':
@@ -26,7 +26,7 @@ class HWMonitor:
             logging.warning("No sensors module found")
 
     def __del__(self):
-        if 'sensors' in sys.modules:
+        if 'backplane.hwmonitor.sensors' in sys.modules:
             sensors.cleanup()
 
     def ReadSensors(self):

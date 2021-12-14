@@ -51,7 +51,7 @@ class BiDAQ:
         :type BoardList: list or tuple of integers
         """
 
-        # logging.basicConfig(stream=sys.stderr, level=logging.INFO)
+        # self.SetLogLevelInfo()
 
         # Init the FPGA registers, if BoardList is None, the class will determine automatically the number of boards by
         # looking at the SysID register defined at build time
@@ -80,6 +80,8 @@ class BiDAQ:
         # Scan the boards and check if they reply to a NOP command
         self.Board, self.BoardList = self.InitBoards()
 
+        logging.info("Init complete - Crate: {}, Half: {}, BoardList: {}".format(self.Crate, self.Half, self.BoardList))
+
         # Disable powerdown for all boards
         if self.SetPowerdownDisableAll() < 0:
             logging.warning("Can't disable powerdown on boards")
@@ -107,7 +109,8 @@ class BiDAQ:
 
         for CurrentBoard in self.FPGA.BoardList:
             Board.append(BiDAQBoard.BiDAQBoard(self.Crate & 0xF, CurrentBoard + 8*self.Half))
-            if Board[-1].NOP()[0] < 0:
+            CmdReply = Board[-1].NOP()
+            if CmdReply.Status:
                 Board.pop()
                 BoardList.remove(CurrentBoard)
             else:
@@ -132,7 +135,7 @@ class BiDAQ:
         """
 
         for BrdIdx in range(len(self.Board)):
-            if self.Board[BrdIdx].Board == Brd:
+            if (self.Board[BrdIdx].Board & 0x7) == Brd:
                 return BrdIdx
 
         return None
@@ -143,10 +146,12 @@ class BiDAQ:
         if hasattr(self, 'BoardList') and hasattr(self, 'Board'):
             for Brd in self.BoardList:
                 BrdIdx = self.FindBoardIdx(Brd)
-                Status, Value = self.Board[BrdIdx].WritePowerdown(int(Enable), 0)
-                if Status < 0:
-                    warnings.warn("Warning. WritePowerdown - Brd: {}, Status: {}, Value: {}".format(Brd, Status, Value))
-                    Ret = Status
+                CmdReply = self.Board[BrdIdx].WritePowerdown(int(Enable), 0)
+                if CmdReply.Status:
+                    warnings.warn("Warning. WritePowerdown - Brd: {}, Status: {}, Value: {}".format(Brd,
+                                                                                                    CmdReply.Status,
+                                                                                                    CmdReply.Value))
+                    Ret = CmdReply.Status
         return Ret
 
     def SetPowerdownEnableAll(self):
@@ -186,12 +191,15 @@ class BiDAQ:
                                                                                                            Enable,
                                                                                                            Freq))
                     BrdIdx = self.FindBoardIdx(Brd)
-                    Status, Value = self.Board[BrdIdx].WriteFilterSettings(Channel, Freq, Enable, Input)
-                    if Status < 0:
+                    CmdReply = self.Board[BrdIdx].WriteFilterSettings(Channel, Freq, Enable, Input)
+                    Status = CmdReply.Status
+                    if CmdReply.Status:
                         warnings.warn(
                             "Warning. SetChannelConfig - Brd: {}, Ch: {}, Status: {}, Value: {}".format(Brd, Channel,
-                                                                                                        Status, Value)
+                                                                                                        CmdReply.Status,
+                                                                                                        CmdReply.Value)
                         )
+
         return Status
 
     def SetChannelConfigDict(self, ConfigDict):
@@ -221,11 +229,13 @@ class BiDAQ:
                                                                                                               Enable,
                                                                                                               Freq))
                     BrdIdx = self.FindBoardIdx(Brd)
-                    Status, Value = self.Board[BrdIdx].WriteFilterSettings(Channel, Freq, Enable, Ground)
-                    if Status < 0:
+                    CmdReply = self.Board[BrdIdx].WriteFilterSettings(Channel, Freq, Enable, Ground)
+                    Status = CmdReply.Status
+                    if CmdReply.Status:
                         warnings.warn(
                             "Warning. SetChannelConfig - Brd: {}, Ch: {}, Status: {}, Value: {}".format(Brd, Channel,
-                                                                                                        Status, Value)
+                                                                                                        CmdReply.Status,
+                                                                                                        CmdReply.Value)
                         )
         return Status
 
@@ -251,8 +261,9 @@ class BiDAQ:
 
         # Set the ADC sampling frequency with some margin (4%) to compensate for clock mismatch
         for i in range(0, len(self.Board)):
-            Status, AdcFreq = self.Board[i].WriteADCFrequency(0, SyncFreq * 1.04)
-            AdcFreq = AdcFreq[0]
+            CmdReply = self.Board[i].WriteADCFrequency(0, SyncFreq * 1.04)
+            AdcFreq = CmdReply.Value
+            Status = CmdReply.Status
             log.debug(
                 "Board[brd].WriteADCFrequency - brd: {}, Status: {}, AdcFreq: {}".format(i, Status, AdcFreq))
             if Status < 0:
@@ -337,14 +348,16 @@ class BiDAQ:
 
         for Brd in BoardListCurr:
             BrdIdx = self.FindBoardIdx(Brd)
-            Status, Value = self.Board[BrdIdx].WriteADCMode(AdcParallelReadout + 1)
-            if Status < 0:
-                log.warning("Warning. WriteADCMode - Brd: {}, Status: {}, Value: {}".format(BrdIdx, Status, Value))
-                return Status
-            Status, Value = self.Board[BrdIdx].StartDAQ(0)
-            if Status < 0:
-                log.warning("Warning. StartDAQ - Brd: {}, Status: {}, Value: {}".format(BrdIdx, Status, Value))
-                return Status
+            CmdReply = self.Board[BrdIdx].WriteADCMode(AdcParallelReadout + 1)
+            if CmdReply.Status:
+                log.warning("Warning. WriteADCMode - Brd: {}, Status: {}, Value: {}".format(BrdIdx, CmdReply.Status,
+                                                                                            CmdReply.Value))
+                return CmdReply.Status
+            CmdReply = self.Board[BrdIdx].StartDAQ(0)
+            if CmdReply.Status:
+                log.warning("Warning. StartDAQ - Brd: {}, Status: {}, Value: {}".format(BrdIdx, CmdReply.Status,
+                                                                                        CmdReply.Value))
+                return CmdReply.Status
 
         # Setup the UDP packet creator with own and destination addresses
         self.FPGA.UdpStreamer.SetUdpStreamEnable(0)
@@ -373,15 +386,17 @@ class BiDAQ:
             RTPPayloadTypeTmp = (RTPPayloadType & 0xFC)
             if not Gpio or Brd < self.FPGA.Gpio:
                 BrdIdx = self.FindBoardIdx(Brd)
-                Status, LatestHWRevision = self.Board[BrdIdx].ReadLatestHWRevision()
-                if Status < 0:
-                    log.warning("Warning. ReadLatestHWRevision - Brd: {}, Status: {}".format(BrdIdx, Status))
-                    return Status
-                Status, FilterEnable = self.Board[BrdIdx].ReadFilterEnable(1)
-                if Status < 0:
-                    log.warning("Warning. ReadFilterEnable - Brd: {}, Status: {}".format(BrdIdx, Status))
-                    return Status
-                RTPPayloadTypeTmp = RTPPayloadTypeTmp | (LatestHWRevision[0] << 1) | (FilterEnable[0])
+                CmdReply = self.Board[BrdIdx].ReadLatestHWRevision()
+                LatestHWRevision = CmdReply.Value
+                if CmdReply.Status:
+                    log.warning("Warning. ReadLatestHWRevision - Brd: {}, Status: {}".format(BrdIdx, CmdReply.Status))
+                    return CmdReply.Status
+                CmdReply = self.Board[BrdIdx].ReadFilterEnable(1)
+                FilterEnable = CmdReply.Value
+                if CmdReply.Status:
+                    log.warning("Warning. ReadFilterEnable - Brd: {}, Status: {}".format(BrdIdx, CmdReply.Status))
+                    return CmdReply.Status
+                RTPPayloadTypeTmp = RTPPayloadTypeTmp | (LatestHWRevision << 1) | FilterEnable
 
             self.FPGA.DataPacketizer.SetRTPPayloadType(RTPPayloadTypeTmp, True, Brd)
             self.FPGA.DataPacketizer.SetPayloadHeader(self.FPGA.SyncGenerator.GetDivider(Brd), Brd)
@@ -432,9 +447,11 @@ class BiDAQ:
 
         for Brd in self.BoardList:
             BrdIdx = self.FindBoardIdx(Brd)
-            Status, Value = self.Board[BrdIdx].StopDAQ(0)
-            if Status < 0:
-                warnings.warn("Warning. StopDAQ - Brd: {}, Status: {}, Value: {}".format(Brd, Status, Value))
+            CmdReply = self.Board[BrdIdx].StopDAQ(0)
+            Status = CmdReply.Status
+            if CmdReply.Status:
+                warnings.warn("Warning. StopDAQ - Brd: {}, Status: {}, Value: {}".format(Brd, CmdReply.Status,
+                                                                                         CmdReply.Value))
                 return -1
 
         Enabled = 0
@@ -460,7 +477,7 @@ class BiDAQ:
         logging.basicConfig(stream=sys.stderr, level=logging.WARNING)
 
     def TestBoards(self):
-        for Brd in self.BoardList: #range(0, 1):  # self.BoardList:
+        for Brd in self.BoardList:
             BrdIdx = self.FindBoardIdx(Brd)
             Status = self.Board[BrdIdx].TestBoard(True)
             print("FINAL STATUS: ", Status)
@@ -633,7 +650,7 @@ def __MainFunction():
         BrdList = Daq.BoardList
         # Build channel config list according to input options. Apply the same settings to all channels
         CfgList = [
-            [[x+8*Daq.Half for x in BrdList], [0], Options.InputConnection, Options.FilterEnable, Options.FilterFreq]
+            [BrdList, [0], Options.InputConnection, Options.FilterEnable, Options.FilterFreq]
         ]
         Daq.SetChannelConfigList(CfgList)
 

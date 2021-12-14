@@ -6,6 +6,7 @@ import can
 import struct
 
 from . import BiDAQCommands
+from . import BiDAQCmdReply
 
 log = logging.getLogger('BiDAQ.BiDAQBoard')
 
@@ -87,19 +88,21 @@ class BiDAQBoard:
 
     def SendCommand(self, CommandStr, Data, Channel=0, Timeout=DefaultTimeout, Queue=False):
 
+        CmdReply = BiDAQCmdReply.BiDAQCmdReply()
+
         CommandStrExt = "CAN_CMD_" + CommandStr
         if CommandStrExt not in self.CommandDict:
             # raise ValueError("Command not found in command dictionary")
-            return -1, None
+            return CmdReply
 
         log.debug(
             "SendCommand - Cmd: {} - Data: {} - Ch {} - Timeout: {} - Queue: {}".format(CommandStrExt, Data, Channel,
                                                                                         Timeout, Queue))
 
-        Status, Cnt = self.Wake()
-        if Status:
+        WakeReply = self.Wake()
+        if WakeReply.Status:
             # raise Exception("The board can't be awaken or does not reply")
-            return Status, Cnt
+            return WakeReply
 
         InMsg = self.SendData(self.CommandDict[CommandStrExt]["CommandByte"], Data, Channel, Timeout)
 
@@ -108,9 +111,11 @@ class BiDAQBoard:
                 return None
             else:
                 # raise Exception("Timeout. No reply to CAN bus command message")
-                return Status, None
+                return CmdReply
 
         Status, InData, Value = self.ParseInMsg(InMsg, CommandStrExt)
+        CmdReply.Value = Value
+        CmdReply.SetSuccess()
 
         log.debug("SendCommand - Status: {} - RcvData: {} - Return value: {}".format(Status, InData, Value))
 
@@ -119,11 +124,13 @@ class BiDAQBoard:
         if Status < 0:
             ErrString = "SendCommand - Command: {}".format(CommandStr)
             if Status == -1:
+                CmdReply.SetWarning()
                 log.warning(ErrString)
             if Status == -2:
+                CmdReply.SetError()
                 log.error(ErrString)
 
-        return Status, Value
+        return CmdReply
 
     def ParseInMsg(self, InMsg, CommandStr):
 
@@ -134,6 +141,9 @@ class BiDAQBoard:
         for OutList in self.CommandDict[CommandStr]["OutputByteList"]:
             InData = [InMsg.data[i] for i in OutList]
             Value = Value + [int.from_bytes(bytes(InData), 'big')]
+
+        if len(Value) == 1:
+            Value = Value[0]
 
         return Status, InData, Value
 
@@ -173,10 +183,12 @@ class BiDAQBoard:
 
     def CheckReply(self, CommandStr, Channel=0, Timeout=DefaultTimeout):
 
+        CmdReply = BiDAQCmdReply.BiDAQCmdReply()
+
         CommandStrExt = "CAN_CMD_" + CommandStr
         if CommandStrExt not in self.CommandDict:
             # raise ValueError("Command not found in command dictionary")
-            return -1, None
+            return CmdReply
 
         InMsg = self.CANReader.get_message(Timeout)
 
@@ -184,40 +196,45 @@ class BiDAQBoard:
 
         if InMsg is None:
             # raise Exception("Timeout. No reply to CAN bus command message")
-            return -1, None
+            return CmdReply
 
         Command = InMsg.data[0]
         Status, InData, Value = self.ParseInMsg(InMsg, CommandStrExt)
 
         if Command != self.CommandDict[CommandStrExt]["CommandByte"]:
             # raise Exception("Error. Reply message comes from a different command")
-            return -1, None
+            return CmdReply
 
         if InMsg.arbitration_id != (self.ID + Channel):
             # raise Exception("Error. Reply message comes from a different ID")
-            return -1, None
+            return CmdReply
 
         log.debug("CheckReply - Status: {} - InData: {} - Value: {}".format(Status, InData, Value))
+
+        CmdReply.Value = Value
+        CmdReply.SetSuccess()
 
         Status = self.CheckStatus(Status)
 
         if Status < 0:
             ErrString = "CheckReply - Command: {}".format(CommandStr)
             if Status == -1:
+                CmdReply.SetWarning()
                 log.warning(ErrString)
             if Status == -2:
+                CmdReply.SetError()
                 log.error(ErrString)
 
         log.debug("CheckReply - Status: {}".format(Status))
 
-        return Status, Value
+        return CmdReply
 
     # Wake board from powerdown. The function waits a maximum of 0.1 s
     def Wake(self):
 
         TimeoutNOP = 0
         TimeoutReply = 0.01
-        Status = 0
+        CmdReply = BiDAQCmdReply.BiDAQCmdReply()
         i = 0
         log.debug("Wake - TimeoutNOP: {}, TimeoutReply: {}".format(TimeoutNOP, TimeoutReply))
         # Retry 10 times with 0.01 s timeout for each command
@@ -227,25 +244,28 @@ class BiDAQBoard:
             # noinspection PyBroadException
             try:
                 # Check the reply
-                Status, Value = self.CheckReply("NOP", 0, TimeoutReply)
+                CmdReply = self.CheckReply("NOP", 0, TimeoutReply)
                 # If there is a reply, then break the cycle
-                if Status == 0:
+                if CmdReply.Status == CmdReply.SUCCESS:
                     break
             except:
                 # If there is an error, continue trying
-                Status = -1
+                CmdReply.SetWarning()
                 pass
 
-        log.debug("Wake - Status: {} - Cnt: {}".format(Status, i + 1))
+        log.debug("Wake - Status: {} - Cnt: {}".format(CmdReply.Status, i + 1))
+
+        CmdReply.Value = i + 1
 
         # Return status code and number of iterations
-        return Status, i + 1
+        return CmdReply
 
     # Initializations
     def InitBoard(self):
-        Status, Value = self.ReadLatestHWRevision()
-        if Status == 0:
-            self.LatestHwRev = Value[0]
+
+        CmdReply = self.ReadLatestHWRevision()
+        if CmdReply.Status == CmdReply.SUCCESS:
+            self.LatestHwRev = CmdReply.Value
             if self.LatestHwRev:
                 self.ADCFullRange = 5/0.4
                 self.FilterGain = ((2.2+3.6)/3.6)/2
@@ -325,7 +345,7 @@ class BiDAQBoard:
     # Read filter cut-off frequency
     def ReadFilterFrequency(self, Channel, Queue=False):
         if _CheckChannel(Channel):
-            return -1
+            return BiDAQCmdReply.BiDAQCmdReply()
         return self.SendCommand("FREQUENCY_READ", 0, Channel, self.DefaultTimeout, Queue)
 
     # Connect inputs or connect them to ground
@@ -349,13 +369,13 @@ class BiDAQBoard:
     # Read trimmer value
     def ReadTrimmer(self, Channel, TrimmerNumber, Queue=False):
         if _CheckChannel(Channel):
-            return -1
+            return BiDAQCmdReply.BiDAQCmdReply()
         return self.SendCommand("TRIMMER_READ", TrimmerNumber << 24, Channel, self.DefaultTimeout, Queue)
 
     # Read trimmer value from the trimmer and not from ucontroller RAM
     def ReadTrimmerForce(self, Channel, TrimmerNumber, Queue=False):
         if _CheckChannel(Channel):
-            return -1
+            return BiDAQCmdReply.BiDAQCmdReply()
         return self.SendCommand("TRIMMER_READ_FORCE", TrimmerNumber << 24, Channel, self.DefaultTimeout, Queue)
 
     # Command duration is 0.42 s
@@ -413,31 +433,34 @@ class BiDAQBoard:
 
     # Read on-board measurement duration
     def ReadMeasurementDuration(self, Channel, Queue=False):
-        Status, Duration = self.SendCommand("ADC_ACQ_TIME_READ", 0, Channel, self.DefaultTimeout, Queue)
-        return Status, [Duration[0] / 1000]
+        CmdReply = self.SendCommand("ADC_ACQ_TIME_READ", 0, Channel, self.DefaultTimeout, Queue)
+        CmdReply.Value = CmdReply.Value / 1000
+        return CmdReply
 
     # Write ADC frequency. Frequency is expressed in Hz. Bit 31 is the SING_CYC setting of ADC (default enabled)
     def WriteADCFrequency(self, Channel, Frequency, SingCycDisable=False, Queue=False):
         Value = int(Frequency * 1000) + (int(SingCycDisable) << 31)
-        Status, Freq = self.SendCommand("ADC_FREQ_WRITE", Value, Channel, self.DefaultTimeout, Queue)
-        return Status, [Freq[0] / 1000]
+        CmdReply = self.SendCommand("ADC_FREQ_WRITE", Value, Channel, self.DefaultTimeout, Queue)
+        CmdReply.Value = CmdReply.Value / 1000
+        return CmdReply
 
     # Read ADC frequency
     def ReadADCFrequency(self, Channel, Queue=False):
-        Status, Freq = self.SendCommand("ADC_FREQ_READ", 0, Channel, self.DefaultTimeout, Queue)
-        return Status, [Freq[0] / 1000]
+        CmdReply = self.SendCommand("ADC_FREQ_READ", 0, Channel, self.DefaultTimeout, Queue)
+        CmdReply.Value = CmdReply.Value / 1000
+        return CmdReply
 
     # Write ADC register. ADC number is 1-6 or 0 if all ADC are selected. Data is 24 bit maximum
     def WriteADCRegister(self, ADCNumber, Register, Data, Queue=False):
         if _CheckADCNumber(ADCNumber, 0):
-            return
+            return BiDAQCmdReply.BiDAQCmdReply()
         Value = (Register << 24) + (Data & 0xFFFFFF)
         return self.SendCommand("ADC_REG_WRITE", Value, ADCNumber, self.DefaultTimeout, Queue)
 
     # Read ADC register. ADC number is 1-6
     def ReadADCRegister(self, ADCNumber, Register, Queue=False):
         if _CheckADCNumber(ADCNumber, 1):
-            return
+            return BiDAQCmdReply.BiDAQCmdReply()
         return self.SendCommand("ADC_REG_READ", Register << 24, ADCNumber, self.DefaultTimeout, Queue)
 
     # Write ADC inputs short setting
@@ -539,13 +562,15 @@ class BiDAQBoard:
     # 6 - Internal 12V analog supply
     # 7 - Internal -12V analog supply
     def ReadPowerSupply(self, PowerSupply, Queue=False):
-        Status, Val = self.SendCommand("POWERSUPPLY_READ", PowerSupply << 24, 0, self.DefaultTimeout, Queue)
-        return Status, [_uint16_to_int16(Val[0]) / 1000]
+        CmdReply = self.SendCommand("POWERSUPPLY_READ", PowerSupply << 24, 0, self.DefaultTimeout, Queue)
+        CmdReply.Value = _uint16_to_int16(CmdReply.Value) / 1000
+        return CmdReply
 
     # Read board temperature
     def ReadTemperature(self, Queue=False):
-        Status, Val = self.SendCommand("TEMPERATURE_READ", 0, 0, self.DefaultTimeout, Queue)
-        return Status, [_uint16_to_int16(Val[0]) / 100]
+        CmdReply = self.SendCommand("TEMPERATURE_READ", 0, 0, self.DefaultTimeout, Queue)
+        CmdReply.Value = _uint16_to_int16(CmdReply.Value) / 100
+        return CmdReply
 
     # Read testpoint. Un valore di ritorno non è letto
     def ReadTestpoint(self, Channel, TestPoint, Queue=False, Timeout=1):
@@ -553,8 +578,10 @@ class BiDAQBoard:
 
     # Read trimmer resistance. Una resistenza non è letta
     def ReadTrimmerResistance(self, Channel, Trimmer, Queue=False, Timeout=2):
-        Status, Val = self.SendCommand("TRIMMER_RES_READ", Trimmer << 24, Channel, Timeout, Queue)
-        return Status, [Val[0] / 500, Val[1] / 500]
+        CmdReply = self.SendCommand("TRIMMER_RES_READ", Trimmer << 24, Channel, Timeout, Queue)
+        CmdReply.Value[0] = CmdReply.Value[0] / 500
+        CmdReply.Value[1] = CmdReply.Value[1] / 500
+        return CmdReply
 
     def ResetErrorCounter(self, Queue=False):
         return self.SendCommand("ERROR_CNT_RESET", 0, 0, self.DefaultTimeout, Queue)
@@ -588,21 +615,11 @@ class BiDAQBoard:
 
         log.info("LatestHwRevision: {}".format(self.LatestHwRev))
 
-        # Status, Value = self.ReadPowerdown()
-        # if Status or (Value is None):
-        #     log.error("Error when reading powerdown - Status: {}".format(Status))
-        #     return -1
-        # PowerdownSetting = Value[0]
-        # Status, Value = self.WritePowerdown(False, False)
-        # if Status or (Value is None):
-        #     log.error("Error when writing powerdown - Status: {}".format(Status))
-        #     return -1
-
-        Status, Value = self.ReadErrorCounter()
-        if Status or (Value is None):
-            log.error("Error when reading error counter - Status: {}".format(Status))
+        CmdReply = self.ReadErrorCounter()
+        if CmdReply.Status or (CmdReply.Value is None):
+            log.error("Error when reading error counter - Status: {}".format(CmdReply.Status))
             return -1
-        ErrorCnt = Value[0]
+        ErrorCnt = CmdReply.Value
         log.info("Error counter: {}".format(ErrorCnt))
         if ErrorCnt > 0:
             log.warning("Error counter at beginning of test already higher than zero ({})".format(ErrorCnt))
@@ -620,13 +637,12 @@ class BiDAQBoard:
             ExpSupply = (
                 (5, 14), (4.8, 5.2), (3.2, 3.4), (4.9, 5.1), (12, 14), (-14, -12), (11.8, 12.3), (-12.3, -11.8))
         for i in range(0, 8):
-            Status, Value = self.ReadPowerSupply(i)
-            if Status or (Value is None):
-                log.error("Power supply test - Error during read - Status: {}".format(Status))
+            CmdReply = self.ReadPowerSupply(i)
+            if CmdReply.Status or (CmdReply.Value is None):
+                log.error("Power supply test - Error during read - Status: {}".format(CmdReply.Status))
                 return -1
-            Value = Value[0]
-            MsgStr = "PS{}: {:7} V".format(i, Value)
-            if ExpSupply[i][0] < Value < ExpSupply[i][1]:
+            MsgStr = "PS{}: {:7} V".format(i, CmdReply.Value)
+            if ExpSupply[i][0] < CmdReply.Value < ExpSupply[i][1]:
                 log.info(MsgStr + " - OK")
             else:
                 log.warning(MsgStr + " - ERROR - Thr low: {}, Thr hi: {}".format(ExpSupply[i][0], ExpSupply[i][1]))
@@ -642,14 +658,14 @@ class BiDAQBoard:
 
         log.info("Temperature test - Started")
         TestStatusNew = TestStatus
-        Status, Value = self.ReadTemperature()
-        if Status or (Value is None):
-            log.error("Temperature test - Error during read - Status: {}".format(Status))
+        CmdReply = self.ReadTemperature()
+        if CmdReply.Status or (CmdReply.Value is None):
+            log.error("Temperature test - Error during read - Status: {}".format(CmdReply.Status))
             return -1
-        if 20 < Value[0] < 45:
-            log.info("Temperature: {} degC - OK".format(Value[0]))
+        if 20 < CmdReply.Value < 45:
+            log.info("Temperature: {} degC - OK".format(CmdReply.Value))
         else:
-            log.warning("Temperature: {} degC - ERROR".format(Value[0]))
+            log.warning("Temperature: {} degC - ERROR".format(CmdReply.Value))
             TestStatus = TestStatus + 1
             TestFailed.append("Memory")
         ErrorCntTmp = self.CheckErrorCounter(ErrorCnt)
@@ -662,15 +678,15 @@ class BiDAQBoard:
 
         log.info("Memory test - Started")
         TestStatusNew = TestStatus
-        Status, Value = self.ReadID()
-        if Status or (Value is None):
-            log.error("Memory test - Error during read - Status: {}".format(Status))
+        CmdReply = self.ReadID()
+        if CmdReply.Status or (CmdReply.Value is None):
+            log.error("Memory test - Error during read - Status: {}".format(CmdReply.Status))
             return -1
-        OldID = Value[0]
+        OldID = CmdReply.Value
         self.WriteID(0xFEFE)
-        Status, Value = self.ReadID()
-        if Value[0] != 0xFEFE:
-            log.warning("ERROR - Wrote: 0xFEFE, read: 0x{:X}".format(Value[0]))
+        CmdReply = self.ReadID()
+        if CmdReply.Value != 0xFEFE:
+            log.warning("ERROR - Wrote: 0xFEFE, read: 0x{:X}".format(CmdReply.Value))
             TestStatus = TestStatus + 1
             TestFailed.append("Memory")
         self.WriteID(OldID)
@@ -682,46 +698,46 @@ class BiDAQBoard:
                 log.info("Memory test - Passed")
             ErrorCnt = ErrorCntTmp
 
-        # log.info("Filter enable test - Started")
-        # TestStatusNew = TestStatus
-        # for i in range(1, 13):
-        #     Status, Value = self.ReadFilterEnable(i)
-        #     if Status or (Value is None):
-        #         log.error("Filter enable test - Error during read - Status: {}".format(Status))
-        #         return -1
-        #     OldValue = Value[0]
-        #     self.WriteFilterEnable(i, int(not OldValue))
-        #     Status, Value = self.ReadFilterEnable(i)
-        #     if Value[0] != int(not OldValue):
-        #         log.warning("ERROR - Wrote: {}, read: {}".format(int(not OldValue), Value[0]))
-        #         TestStatus = TestStatus + 1
-        #         TestFailed.append("Filter enable")
-        #     self.WriteFilterEnable(i, OldValue)
-        # ErrorCntTmp = self.CheckErrorCounter(ErrorCnt)
-        # if ErrorCntTmp >= 0:
-        #     if ErrorCntTmp > ErrorCnt or TestStatusNew != TestStatus:
-        #         log.warning("Filter enable test - Not passed")
-        #     else:
-        #         log.info("Filter enable test - Passed")
-        #     ErrorCnt = ErrorCntTmp
+        log.info("Filter enable test - Started")
+        TestStatusNew = TestStatus
+        for i in range(1, 13):
+            CmdReply = self.ReadFilterEnable(i)
+            if CmdReply.Status or (CmdReply.Value is None):
+                log.error("Filter enable test - Error during read - Status: {}".format(CmdReply.Status))
+                return -1
+            OldValue = CmdReply.Value
+            self.WriteFilterEnable(i, int(not OldValue))
+            CmdReply = self.ReadFilterEnable(i)
+            if CmdReply.Value != int(not OldValue):
+                log.warning("ERROR - Wrote: {}, read: {}".format(int(not OldValue), CmdReply.Value))
+                TestStatus = TestStatus + 1
+                TestFailed.append("Filter enable")
+            self.WriteFilterEnable(i, OldValue)
+        ErrorCntTmp = self.CheckErrorCounter(ErrorCnt)
+        if ErrorCntTmp >= 0:
+            if ErrorCntTmp > ErrorCnt or TestStatusNew != TestStatus:
+                log.warning("Filter enable test - Not passed")
+            else:
+                log.info("Filter enable test - Passed")
+            ErrorCnt = ErrorCntTmp
 
         log.info("Trimmer chain test - Started")
         TestStatusNew = TestStatus
         for i in range(1, 13):
             for j in range(0, 6):
-                Status, Value = self.ReadTrimmerForce(i, j)
-                if Status or (Value is None):
-                    log.error("Trimmer chain test - Error during read - Status: {}".format(Status))
+                CmdReply = self.ReadTrimmerForce(i, j)
+                if CmdReply.Status or (CmdReply.Value is None):
+                    log.error("Trimmer chain test - Error during read - Status: {}".format(CmdReply.Status))
                     return -1
-                OldValue = Value[0]
+                OldValue = CmdReply.Value
                 if OldValue != 512:
                     NewValue = 512
                 else:
                     NewValue = 256
                 self.WriteTrimmer(i, j, NewValue)
-                Status, Value = self.ReadTrimmerForce(i, j)
-                if Value[0] != NewValue:
-                    log.warning("ERROR - Wrote: {}, read: {}".format(NewValue, Value[0]))
+                CmdReply = self.ReadTrimmerForce(i, j)
+                if CmdReply.Value != NewValue:
+                    log.warning("ERROR - Wrote: {}, read: {}".format(NewValue, CmdReply.Value))
                     TestStatus = TestStatus + 1
                     TestFailed.append("Trimmer chain (channel {} trimmer {}".format(i, j))
                 self.WriteTrimmer(i, j, OldValue)
@@ -736,20 +752,20 @@ class BiDAQBoard:
         log.info("ADC register test - Started")
         TestStatusNew = TestStatus
         for i in range(1, 7):
-            Status, Value = self.ReadADCRegister(i, 0x7)
-            if Status or (Value is None):
-                log.error("ADC register test - Error during read - Status: {}".format(Status))
+            CmdReply = self.ReadADCRegister(i, 0x7)
+            if CmdReply.Status or (CmdReply.Value is None):
+                log.error("ADC register test - Error during read - Status: {}".format(CmdReply.Status))
                 return -1
-            if Value[0] != 0x0CDE:
-                log.warning("ERROR - Expected: 0x0CDE, read: 0x{:X}".format(Value[0]))
+            if CmdReply.Value != 0x0CDE:
+                log.warning("ERROR - Expected: 0x0CDE, read: 0x{:X}".format(CmdReply.Value))
                 TestStatus = TestStatus + 1
                 TestFailed.append("ADC register test")
-            Status, Value = self.ReadADCRegister(i, 0x3B)
-            OldValue = Value[0]
+            CmdReply = self.ReadADCRegister(i, 0x3B)
+            OldValue = CmdReply.Value
             self.WriteADCRegister(i, 0x3B, 0x512345)
-            Status, Value = self.ReadADCRegister(i, 0x3B)
-            if Value[0] != 0x512345:
-                log.warning("ERROR - Wrote: 0x512345, read: 0x{:X}".format(Value[0]))
+            CmdReply = self.ReadADCRegister(i, 0x3B)
+            if CmdReply.Value != 0x512345:
+                log.warning("ERROR - Wrote: 0x512345, read: 0x{:X}".format(CmdReply.Value))
                 TestStatus = TestStatus + 1
                 TestFailed.append("ADC register test")
             self.WriteADCRegister(i, 0x3B, OldValue)
@@ -764,7 +780,9 @@ class BiDAQBoard:
         log.info("Noise test - Started")
         TestStatusNew = TestStatus
         Duration = 1
-        self.WriteFilterSettings(0, 100, 1, 2)
+        # self.WriteFilterSettings(0, 100, 1, 2)
+        self.WriteFilterSettings(0, 100, 1, 3)
+        self.WriteADCInputShorted(0, 0)
         self.AutomaticADCCalibration(0)
         self.WriteADCFrequency(0, 1000)
         self.WriteMeasurementEnable(0, 1)
@@ -774,19 +792,19 @@ class BiDAQBoard:
         for i in range(1, 13):
             Cnt = 0
             while Cnt < 10:
-                Status, Value = self.ReadMeasurement(i, 3)
-                if Status or (Value is None):
+                CmdReply = self.ReadMeasurement(i, 3)
+                if CmdReply.Status or (CmdReply.Value is None):
                     log.error("Noise test - Error meas read - Status: {}".format(Status))
                     return -1
-                if Value[0] == 0:
+                if CmdReply.Value == 0:
                     break
                 else:
                     time.sleep(Duration / 10)
                     Cnt = Cnt + 1
-            Status, Value = self.ReadMeasurement(i, 0)
-            MeanVal = (_IntToFloat(Value[0]) / 2**23 - 1) * self.ADCFullRange * self.FilterGain
-            Status, Value = self.ReadMeasurement(i, 1)
-            RMSVal = _IntToFloat(Value[0]) / 2**23 * self.ADCFullRange * self.FilterGain
+            CmdReply = self.ReadMeasurement(i, 0)
+            MeanVal = (_IntToFloat(CmdReply.Value) / 2**23 - 1) * self.ADCFullRange * self.FilterGain
+            CmdReply = self.ReadMeasurement(i, 1)
+            RMSVal = _IntToFloat(CmdReply.Value) / 2**23 * self.ADCFullRange * self.FilterGain
             log.info("Channel {} - Mean: {:.2f} uV".format(i, MeanVal * 1e6))
             log.info("Channel {} - RMS:  {:.2f} uV".format(i, RMSVal * 1e6))
 
@@ -800,21 +818,15 @@ class BiDAQBoard:
 
         # after testing ADC, set inputs to ground, Vref, etc and test noise by changing cutoff freq, daq speed, vref...
 
-        # Status, Value = self.WritePowerdown(PowerdownSetting, False)
-        # if Status or (Value is None):
-        #     log.error("Error when writing powerdown - Status: {}".format(Status))
-        #     return -1
-
         log.setLevel(PreviousLogLevel)
         return 0
 
     def CheckErrorCounter(self, ErrorCnt):
 
-        Status, Value = self.ReadErrorCounter()
-        if Status or (Value is None):
-            log.warning("Error when reading error counter - Status: {}".format(Status))
+        CmdReply = self.ReadErrorCounter()
+        if CmdReply.Status or (CmdReply.Value is None):
+            log.warning("Error when reading error counter - Status: {}".format(CmdReply.Status))
             return -1
-        ErrorCntTmp = Value[0]
-        if ErrorCntTmp > ErrorCnt:
-            log.warning("Errors occurred during last test - Error counter: {}".format(ErrorCntTmp))
-        return ErrorCntTmp
+        if CmdReply.Value > ErrorCnt:
+            log.warning("Errors occurred during last test - Error counter: {}".format(CmdReply.Value))
+        return CmdReply.Value
