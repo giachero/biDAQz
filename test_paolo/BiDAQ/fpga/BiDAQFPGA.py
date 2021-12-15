@@ -108,6 +108,7 @@ class BiDAQFPGA:
 
     def GetMonitorRegisters(self):
 
+        BC = self.BoardControl.GetMonitorRegisters()
         DP = self.DataPacketizer.GetMonitorRegisters()
         SG = self.SyncGenerator.GetMonitorRegisters()
         US = self.UdpStreamer.GetMonitorRegisters()
@@ -121,7 +122,7 @@ class BiDAQFPGA:
             Fifo[CurFifo]["FillLevel"] = CurFifoAttr.GetFillLevel()
 
         # MonitorDict = {**DP, **SG, **US, **TM, **HTM, **Fifo}
-        MonitorDict = reduce(self.__merge, [DP, SG, US, TM, HTM, Fifo])
+        MonitorDict = reduce(self.__merge, [BC, DP, SG, US, TM, HTM, Fifo])
 
         return MonitorDict
 

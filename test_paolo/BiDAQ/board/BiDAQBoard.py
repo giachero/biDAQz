@@ -102,6 +102,7 @@ class BiDAQBoard:
         WakeReply = self.Wake()
         if WakeReply.Status:
             # raise Exception("The board can't be awaken or does not reply")
+            # print("The board can't be awaken or does not reply")
             return WakeReply
 
         InMsg = self.SendData(self.CommandDict[CommandStrExt]["CommandByte"], Data, Channel, Timeout)
@@ -534,6 +535,10 @@ class BiDAQBoard:
     def ReadMeasurementData(self, Channel, Address, NData, Queue=False):
         Value = (Address << 16) + (NData & 0xFFFF)
         return self.SendCommand("ADC_READ_DATA", Value, Channel, self.DefaultTimeout, Queue)
+
+    # Start continuous DAQ. AltSync is 1 for ALT_SYNC mode, or 0 for NORMAL_SYNC mode
+    def ReadDAQRunning(self, Queue=False):
+        return self.SendCommand("ADC_READ_CONTINUOUS", 0, 0, self.DefaultTimeout, Queue)
 
     # Start continuous DAQ. AltSync is 1 for ALT_SYNC mode, or 0 for NORMAL_SYNC mode
     def StartDAQ(self, Channel, AltSync=True, Queue=False):

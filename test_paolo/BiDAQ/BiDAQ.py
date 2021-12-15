@@ -86,6 +86,10 @@ class BiDAQ:
         if self.SetPowerdownDisableAll() < 0:
             logging.warning("Can't disable powerdown on boards")
 
+        # Start ADCs read for all boards
+        if self.StartAdc() < 0:
+            logging.info("Can't start ADCs continuous read. Boards might be already enabled")
+
         # Initialize RTP source fields
         self.FPGA.InitRtpSourceIds(0xBDAC, self.Crate, self.Half)
 
@@ -269,6 +273,10 @@ class BiDAQ:
             if Status < 0:
                 return Status, 0, 0
 
+        for i in self.FPGA.SyncGenerator.BoardList:
+            if self.FPGA.SyncGenerator.GetEnable(i):
+                return -1, 0, 0
+
         # Set the same divider on all the boards
         self.FPGA.SyncGenerator.SetDivider(SyncFreqDiv)
         log.debug("FPGA.SetDivider - SyncFreq: {}, SyncFreqDiv: {}".format(SyncFreq / 2, SyncFreqDiv))
@@ -299,6 +307,78 @@ class BiDAQ:
         if ADCParallelReadout:
             self.FPGA.BoardControl.SetADCModeParallel()
 
+    # Start just ADC readout from FPGA, without sending out any data
+    def StartAdc(self, Frequency=1000, AdcParallelReadout=True, BoardList=None):
+        """
+        Start the DAQ.
+
+        :param Frequency: Desired DAQ frequency.
+        :type Frequency: int
+        :param AdcParallelReadout: Set ADC parallel readout.
+        :type AdcParallelReadout: bool
+        :param BoardList: Set list of boards to be started (None starts all).
+        :type BoardList: list or tuple or None
+        :return: Return status (a negative value means error).
+        :rtype: int
+        """
+
+        if BoardList is None:
+            BoardListCurr = self.BoardList
+        else:
+            BoardListCurr = BoardList
+
+        for Brd in BoardListCurr:
+            BrdIdx = self.FindBoardIdx(Brd)
+            CmdReply = self.Board[BrdIdx].ReadDAQRunning()
+            if CmdReply.Status:
+                log.warning("Warning. ReadDAQRunning - Brd: {}, Status: {}, Value: {}".format(BrdIdx, CmdReply.Status,
+                                                                                              CmdReply.Value))
+                return CmdReply.Status
+            if CmdReply.Value:
+                log.info("At least one board is already in continuous DAQ mode")
+                return -1
+
+        Status, SyncFreq, AdcFreq = self.SetFrequency(Frequency)
+        if Status < 0:
+            log.warning("Couldn't set DAQ frequency")
+            return Status
+        if AdcFreq < SyncFreq * 1.04:
+            log.warning("DAQ freq is too high (AdcFreq: {}, SyncFreq: {})".format(AdcFreq, SyncFreq))
+            return -1
+
+        for Brd in BoardListCurr:
+            BrdIdx = self.FindBoardIdx(Brd)
+            CmdReply = self.Board[BrdIdx].WriteADCMode(AdcParallelReadout + 1)
+            if CmdReply.Status:
+                log.warning("Warning. WriteADCMode - Brd: {}, Status: {}, Value: {}".format(BrdIdx, CmdReply.Status,
+                                                                                            CmdReply.Value))
+                return CmdReply.Status
+            CmdReply = self.Board[BrdIdx].StartDAQ(0)
+            if CmdReply.Status:
+                log.warning("Warning. StartDAQ - Brd: {}, Status: {}, Value: {}".format(BrdIdx, CmdReply.Status,
+                                                                                        CmdReply.Value))
+                return CmdReply.Status
+
+        for Brd in BoardListCurr:
+            # Enable the SPI block
+            self.FPGA.BoardControl.SetADCMode(AdcParallelReadout, Brd)
+            self.FPGA.BoardControl.SetEnable(1, Brd)
+
+        # General enable (this is obsolete)
+        self.FPGA.GeneralEnable.SetEnable(1)
+
+        # Setup the sync generator block
+        for Brd in BoardListCurr:
+            if self.FPGA.SysId.GetFwRevision() > 4:
+                self.FPGA.SyncGenerator.SetTimestampResetValue(0xFFFFFFFF, Brd)
+            self.FPGA.SyncGenerator.Reset(Brd)
+            self.FPGA.SyncGenerator.SetEnable(1, Brd)
+
+        # Start the acquisition by applying the sync clock, in common to all boards
+        self.FPGA.ClockRefGenerator.SetEnable(1)
+
+        return 0
+
     # Start DAQ
     def StartDaq(self, IpAdrDst, UdpPortDst, Frequency, SamplesPerPacket=180, AdcParallelReadout=True,
                  DropTimestamp=True, RTPPayloadType=20, BoardList=None, Gpio=False):
@@ -327,11 +407,10 @@ class BiDAQ:
         :rtype: int
         """
 
-        # TODO: check that DAQ is not running
-#        Status = self.StopDaq()
-#        if Status < 0:
-#            log.warning("Couldn't stop DAQ")
-#            return Status
+        Status = self.StopDaq(True)
+        if Status < 0:
+            log.warning("Couldn't stop DAQ")
+            return Status
 
         Status, SyncFreq, AdcFreq = self.SetFrequency(Frequency)
         if Status < 0:
@@ -422,19 +501,20 @@ class BiDAQ:
         return 0
 
     # Stop DAQ
-    def StopDaq(self):
+    def StopDaq(self, FullStop=False):
         """
         Stop the DAQ.
 
         :return: Return status (a negative value means error).
         :rtype: int
         """
+        if FullStop:
+            self.FPGA.ClockRefGenerator.SetEnable(0)
+            time.sleep(0.05)  # TODO: poll some registers to check that transmission is over
+            self.FPGA.SyncGenerator.SetEnable(0)
+            self.FPGA.GeneralEnable.SetEnable(0)
+            self.FPGA.BoardControl.SetEnable(0)
 
-        self.FPGA.ClockRefGenerator.SetEnable(0)
-        time.sleep(0.05)  # TODO: poll some registers to check that transmission is over
-        self.FPGA.SyncGenerator.SetEnable(0)
-        self.FPGA.GeneralEnable.SetEnable(0)
-        self.FPGA.BoardControl.SetEnable(0)
         self.FPGA.DataPacketizer.SetEnable(0)
         if self.FPGA.Gpio is not None:
             self.FPGA.GpioControl.SetEnable(0)
@@ -444,23 +524,23 @@ class BiDAQ:
 
         if self.SetPowerdownDisableAll():
             return -1
+        if FullStop:
+            for Brd in self.BoardList:
+                BrdIdx = self.FindBoardIdx(Brd)
+                CmdReply = self.Board[BrdIdx].StopDAQ(0)
+                Status = CmdReply.Status
+                if CmdReply.Status:
+                    warnings.warn("Warning. StopDAQ - Brd: {}, Status: {}, Value: {}".format(Brd, CmdReply.Status,
+                                                                                             CmdReply.Value))
+                    return -1
 
-        for Brd in self.BoardList:
-            BrdIdx = self.FindBoardIdx(Brd)
-            CmdReply = self.Board[BrdIdx].StopDAQ(0)
-            Status = CmdReply.Status
-            if CmdReply.Status:
-                warnings.warn("Warning. StopDAQ - Brd: {}, Status: {}, Value: {}".format(Brd, CmdReply.Status,
-                                                                                         CmdReply.Value))
+            Enabled = 0
+            for Brd in range(0, len(self.Board)):
+                Enabled |= self.FPGA.SyncGenerator.GetEnable(Brd)
+            Enabled |= self.FPGA.GeneralEnable.GetEnable()
+
+            if Enabled == 1 | Status < 0:
                 return -1
-
-        Enabled = 0
-        for Brd in range(0, len(self.Board)):
-            Enabled |= self.FPGA.SyncGenerator.GetEnable(Brd)
-        Enabled |= self.FPGA.GeneralEnable.GetEnable()
-
-        if Enabled == 1 | Status < 0:
-            return -1
 
         return 0
 

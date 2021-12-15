@@ -41,3 +41,25 @@ class BoardControl:
 
     def GetInData(self, Board, Channel):
         return self.FpgaReg.GetBoardSetting("BiDAQ_control_", "IN_DATA_{}".format(Channel), Board)
+
+    def GetMonitorRegisters(self, BoardList=None, ChannelList=None):
+
+        if BoardList is None:
+            BoardList = self.FpgaReg.BoardList
+
+        if ChannelList is None:
+            ChannelList = list(range(0, 12))
+
+        RetDict = dict()
+
+        for Brd in BoardList:
+            RetDict["Board_{}".format(Brd)] = dict()
+            RetDict["Board_{}".format(Brd)]["Board"] = Brd
+            RetDict["Board_{}".format(Brd)]["BoardControl"] = dict()
+            for Ch in ChannelList:
+                RetDict["Board_{}".format(Brd)]["BoardControl"]["Channel_{}".format(Ch)] = dict()
+                RetDict["Board_{}".format(Brd)]["BoardControl"]["Channel_{}".format(Ch)]["Channel"] = Ch
+                RetDict["Board_{}".format(Brd)]["BoardControl"]["Channel_{}".format(Ch)]["InData"] = \
+                    self.GetInData(Brd, Ch)
+
+        return RetDict

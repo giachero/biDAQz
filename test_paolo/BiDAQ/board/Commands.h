@@ -30,12 +30,12 @@
 #define	CAN_CMD_ID_READ									(CAN_CMD_ID_WRITE | CAN_CMD_READ)									// 3:4,1,'hex','hexadecimal',3:4,1,'num','decimal'
 #define	CAN_CMD_FW_VER_READ							(0x51 | CAN_CMD_READ)															// 1:4,1,'num','YYMMDDhhmm'
 #define CAN_CMD_HW_REV_READ							(0x52 | CAN_CMD_READ)															// 4:4,1,'num',''
-#define CAN_CMD_HW_REV_EXT_READ							(0x53 | CAN_CMD_READ)															// 4:4,1,'num',''
+#define	CAN_CMD_HW_REV_EXT_READ					(0x53 | CAN_CMD_READ)															// 4:4,1,'num',''
 #define	CAN_CMD_BLINK										0x5F																							//
 
 #define	CAN_CMD_RESTART									0x70																							//
 #define	CAN_CMD_RECALIBRATE							0x71																							//
-#define	CAN_CMD_POWERDOWN_CONFIG				0x72																							// 
+#define	CAN_CMD_POWERDOWN_CONFIG				0x72																							//
 #define	CAN_CMD_POWERDOWN_READ					(CAN_CMD_POWERDOWN_CONFIG | CAN_CMD_READ)					// 4:4,1,'bool','true = enabled\nfalse = disabled'
 #define	CAN_CMD_RESET_FACTORY						0x78																							//
 
@@ -47,7 +47,7 @@
 #define	CAN_CMD_INPUT_GROUND_WRITE			0x03																							//
 #define	CAN_CMD_INPUT_GROUND_READ				(CAN_CMD_INPUT_GROUND_WRITE | CAN_CMD_READ)				// 3:4,1,'hex','1 = grounded\n0 = normal'
 #define	CAN_CMD_FREQUENCY_AND_ENABLE		0x04																							// 1:4,1,'num','Hz'
-#define	CAN_CMD_TRIMMER_WRITE						0x0E																							//  
+#define	CAN_CMD_TRIMMER_WRITE						0x0E																							//
 #define	CAN_CMD_TRIMMER_READ						(CAN_CMD_TRIMMER_WRITE | CAN_CMD_READ)						// 3:4,1,'hex',''
 #define	CAN_CMD_TRIMMER_READ_FORCE			(0x0F | CAN_CMD_READ)															// 3:4,1,'hex',''
 
@@ -92,6 +92,7 @@
 #define	CAN_CMD_ADC_READ_MEAS						(0x3A | CAN_CMD_READ)															// 1:4,1,'meas',{'uV' 'uV RMS' 'uV' '' 'N. of samples' 'ms' ''}
 #define	CAN_CMD_ADC_READ_DATA						(0x3B | CAN_CMD_READ)															//
 #define	CAN_CMD_ADC_CONTINUOUS					0x3D																							//
+#define	CAN_CMD_ADC_READ_CONTINUOUS			(CAN_CMD_ADC_CONTINUOUS | CAN_CMD_READ)						// 4:4,1,'bool','true = enabled\nfalse = disabled'
 #define	CAN_CMD_ADC_STOP								0x3E																							//
 #define	CAN_CMD_ADC_SINGLE							0x3F																							// 1:4,1,'hex','ADC value',1:4,0.000001,'adcvolt','uV'
 #define	CAN_CMD_MODE_WRITE							0x30																							//
@@ -99,7 +100,7 @@
 
 // 5.6. Monitoring commands
 #define	CAN_CMD_POWERSUPPLY_READ				(0x40 | CAN_CMD_READ)															// 3:4,1000,'signedfloat','V'
-#define	CAN_CMD_TEMPERATURE_READ				(0X41 | CAN_CMD_READ)															// 3:4,100,'float','�C'
+#define	CAN_CMD_TEMPERATURE_READ				(0x41 | CAN_CMD_READ)															// 3:4,100,'float','°C'
 #define	CAN_CMD_TESTPOINT_READ					(0x4E | CAN_CMD_READ)															// 2:4,1,'hex','ADC value',1:1,1,'num','Iterations'
 #define	CAN_CMD_TRIMMER_RES_READ				(0x4F | CAN_CMD_READ)															// 1:2,500,'float','kOhm',3:4,500,'float','kOhm'
 
