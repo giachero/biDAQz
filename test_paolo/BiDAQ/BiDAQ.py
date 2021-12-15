@@ -482,6 +482,21 @@ class BiDAQ:
             Status = self.Board[BrdIdx].TestBoard(True)
             print("FINAL STATUS: ", Status)
 
+    def GetInputValue(self, Board, Channel):
+        if self.FPGA.SysId.GetFwRevision() >= 8:
+            return ((self.FPGA.BoardControl.GetInData(0, Channel) >> 8) / 2**23 - 1) * \
+                   self.Board[Board].ADCFullRange * self.Board[Board].FilterGain
+        else:
+            log.warning("FPGA firmware v{} does not support GetInputValue".format(self.FPGA.SysId.GetFwRevision()))
+            return None
+
+    def GetInputValueAll(self):
+        InputValues = list()
+        for Brd in self.BoardList:
+            for Ch in range(0, 12):
+                InputValues = InputValues + [self.GetInputValue(Brd, Ch)]
+        return InputValues
+
     def GetFPGAMonitorRegisters(self):
         """
         Get the FPGA monitoring registers.

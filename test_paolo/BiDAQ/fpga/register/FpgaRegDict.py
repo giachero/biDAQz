@@ -24,6 +24,12 @@ class FpgaRegDict:
             "SSEL_HOLD": (16, 31),
             "RESET_HOLD": (0, 15)}
 
+        BiDAQ_control_16_bits = dict()
+
+        for i in range(12):
+            BiDAQ_control_16_bits["BiDAQ_control_{}_bits".format(16 + i)] = {
+                "IN_DATA_{}".format(i): (0, 31)}
+
         BiDAQ_gpio_control_0_bits = {
             "ID": (8, 15),
             "SYNC_DIVIDE": (4, 4),
@@ -377,6 +383,13 @@ class FpgaRegDict:
                 "BiDAQ_control_{}_1".format(i): (0x00010004 + 0x100 * i, BiDAQ_control_1_bits),
                 "BiDAQ_control_{}_2".format(i): (0x00010008 + 0x100 * i, BiDAQ_control_2_bits)}
             LocalRegDict["BiDAQ_control_{}".format(i)] = NewDict
+
+            for j in range(12):
+                NewDict["BiDAQ_control_{}_{}".format(i, 16 + j)] = (
+                    0x00010040 + 0x100 * i + 0x004 * j,
+                    BiDAQ_control_16_bits["BiDAQ_control_{}_bits".format(16 + j)])
+
+            LocalRegDict["BiDAQ_packetizer_{}".format(i)] = NewDict
 
             if i == 0:
                 # BiDAQ_gpio_control

@@ -304,6 +304,10 @@ class BiDAQBoard:
     def ReadLatestHWRevision(self, Queue=False):
         return self.SendCommand("HW_REV_READ", 0, 0, self.DefaultTimeout, Queue)
 
+    # Read extended HW revision
+    def ReadExtendedHWRevision(self, Queue=False):
+        return self.SendCommand("HW_REV_EXT_READ", 0, 0, self.DefaultTimeout, Queue)
+
     # Blink LEDs
     def Blink(self, Mode=0, Delay_ms=0, Period_ms=500, N=3, Queue=False):
         Value = (Mode << 24) + (int(Delay_ms / 10) << 16) + (int(Period_ms / 20) << 8) + N
@@ -794,7 +798,7 @@ class BiDAQBoard:
             while Cnt < 10:
                 CmdReply = self.ReadMeasurement(i, 3)
                 if CmdReply.Status or (CmdReply.Value is None):
-                    log.error("Noise test - Error meas read - Status: {}".format(Status))
+                    log.error("Noise test - Error meas read - Status: {}".format(CmdReply.Status))
                     return -1
                 if CmdReply.Value == 0:
                     break

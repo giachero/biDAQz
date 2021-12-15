@@ -38,3 +38,6 @@ class BoardControl:
 
     def GetEnable(self, Board):
         return self.FpgaReg.GetBoardSetting("BiDAQ_control_", "EN", Board)
+
+    def GetInData(self, Board, Channel):
+        return self.FpgaReg.GetBoardSetting("BiDAQ_control_", "IN_DATA_{}".format(Channel), Board)
