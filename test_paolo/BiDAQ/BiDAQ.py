@@ -332,21 +332,21 @@ class BiDAQ:
 
         for Ch in range(12):
 
-            CmdReply = self.Board[Board].ReadInputGrounded(Ch)
+            CmdReply = self.Board[Board].ReadInputGrounded(Ch + 1)
             if CmdReply.Status:
                 log.warning("Warning. ReadInputGrounded - Brd: {}, Status: {}, Value: {}".format(
                     Board, CmdReply.Status, CmdReply.Value))
                 return CmdReply.Status
             FilterInput[Ch] = CmdReply.Value
 
-            CmdReply = self.Board[Board].ReadFilterFrequency(Ch)
+            CmdReply = self.Board[Board].ReadFilterFrequency(Ch + 1)
             if CmdReply.Status:
                 log.warning("Warning. ReadFilterFrequency - Brd: {}, Status: {}, Value: {}".format(
                     Board, CmdReply.Status, CmdReply.Value))
                 return CmdReply.Status
             FilterFreq[Ch] = CmdReply.Value
 
-            CmdReply = self.Board[Board].ReadFilterEnable(Ch)
+            CmdReply = self.Board[Board].ReadFilterEnable(Ch + 1)
             if CmdReply.Status:
                 log.warning("Warning. ReadFilterEnable - Brd: {}, Status: {}, Value: {}".format(
                     Board, CmdReply.Status, CmdReply.Value))
@@ -355,25 +355,25 @@ class BiDAQ:
 
             return 0, FilterInput, FilterFreq, FilterEnable
 
-    def WriteChannelSetting(self, Board, FilterInput, FilterFreq, FilterEnable):
+    def RestoreChannelSetting(self, Board, FilterInput, FilterFreq, FilterEnable):
 
         for Ch in range(12):
 
             CmdReply = self.Board[Board].WriteInputGrounded(Ch, FilterInput[Ch])
             if CmdReply.Status:
-                log.warning("Warning. ReadInputGrounded - Brd: {}, Status: {}, Value: {}".format(
+                log.warning("Warning. WriteInputGrounded - Brd: {}, Status: {}, Value: {}".format(
                     Board, CmdReply.Status, CmdReply.Value))
                 return CmdReply.Status
 
             CmdReply = self.Board[Board].WriteFilterFrequency(Ch, FilterFreq[Ch])
             if CmdReply.Status:
-                log.warning("Warning. ReadFilterFrequency - Brd: {}, Status: {}, Value: {}".format(
+                log.warning("Warning. WriteFilterFrequency - Brd: {}, Status: {}, Value: {}".format(
                     Board, CmdReply.Status, CmdReply.Value))
                 return CmdReply.Status
 
-            CmdReply = self.Board[Board].ReadFilterEnable(Ch, FilterEnable[Ch])
+            CmdReply = self.Board[Board].WriteFilterEnable(Ch, FilterEnable[Ch])
             if CmdReply.Status:
-                log.warning("Warning. ReadFilterEnable - Brd: {}, Status: {}, Value: {}".format(
+                log.warning("Warning. WriteFilterEnable - Brd: {}, Status: {}, Value: {}".format(
                     Board, CmdReply.Status, CmdReply.Value))
                 return CmdReply.Status
 
@@ -447,7 +447,7 @@ class BiDAQ:
                                                                                                       DeltaOff))
         self.StopDaq(True)
 
-        Status = self.WriteChannelSetting(Board, FilterInputOld, FilterFreqOld, FilterEnableOld)
+        Status = self.RestoreChannelSetting(Board, FilterInputOld, FilterFreqOld, FilterEnableOld)
         if Status:
             log.warning("Warning. WriteChannelSetting - Brd: {}, Status: {}".format(Board, Status))
             return Status
@@ -548,7 +548,7 @@ class BiDAQ:
                             Board, Ch + 1, CmdReply.Status, CmdReply.Value))
                     return CmdReply.Status
 
-        Status = self.WriteChannelSetting(Board, FilterInputOld, FilterFreqOld, FilterEnableOld)
+        Status = self.RestoreChannelSetting(Board, FilterInputOld, FilterFreqOld, FilterEnableOld)
         if Status:
             log.warning("Warning. WriteChannelSetting - Brd: {}, Status: {}".format(Board, Status))
             return Status

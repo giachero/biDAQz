@@ -53,6 +53,8 @@ class BiDAQBoard:
 #
 #        if Status:
 #            raise TimeoutError('Board at ID {} does not reply'.format(hex(self.ID)))
+    def __repr__(self):
+        return "BiDAQ Board - Crate: {}, Board: {}, ID: 0x{:08X}".format(self.Crate, self.Board, self.ID)
 
     def SendData(self, Command, Data, Channel=0, Timeout=DefaultTimeout, Queue=False):
 
@@ -86,7 +88,15 @@ class BiDAQBoard:
 
         return InMsg
 
+    def FlushBuffer(self):
+
+        msg = 0
+        while msg is not None:
+            msg = self.CANReader.get_message(0.000001)
+
     def SendCommand(self, CommandStr, Data, Channel=0, Timeout=DefaultTimeout, Queue=False):
+
+        self.FlushBuffer()
 
         CmdReply = BiDAQCmdReply.BiDAQCmdReply()
 
