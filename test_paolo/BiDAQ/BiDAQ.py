@@ -94,9 +94,18 @@ class BiDAQ:
         # Initialize RTP source fields
         self.FPGA.InitRtpSourceIds(0xBDAC, self.Crate, self.Half)
 
-    def __del__(self):
+    def __enter__(self):
+        if self.SetPowerdownDisableAll() < 0:
+            log.warning("Can't disable powerdown on boards")
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
         if self.SetPowerdownEnableAll() < 0:
             log.warning("Can't re-enable powerdown on boards")
+        if exc_type:
+            print(f'exc_type: {exc_type}')
+            print(f'exc_value: {exc_value}')
+            print(f'exc_traceback: {exc_traceback}')
 
     def InitBoards(self):
         """
@@ -308,21 +317,29 @@ class BiDAQ:
         if ADCParallelReadout:
             self.FPGA.BoardControl.SetADCModeParallel()
 
-    def ReadAdcValueN(self, Board, N):
+    def ReadAdcGenericN(self, Board, N, GetInputValueFcn):
         ValList = [0] * 12
+        TimestampList = [-1] * 12
+        Timeout = self.FPGA.SyncGenerator.GetDivider(Board) / 500000 * 2 * 1.1
         for i in range(N):
             for Ch in range(12):
-                Val = self.GetInputValue(Board, Ch)
+                Val = TimestampList[Ch]
+                Start = time.time()
+                while Val == TimestampList[Ch]:
+                    if (time.time() - Start) > Timeout:
+                        log.error("Error. Timeout while reading data")
+                        return -1
+                    Val = self.FPGA.SyncGenerator.GetTimestamp(Board)
+                TimestampList[Ch] = Val
+                Val = GetInputValueFcn(Board, Ch)
                 ValList[Ch] = (ValList[Ch] * i + Val) / (i + 1)
         return ValList
 
+    def ReadAdcValueN(self, Board, N):
+        return self.ReadAdcGenericN(Board, N, self.GetInputValue)
+
     def ReadAdcVoltageN(self, Board, N):
-        ValList = [0] * 12
-        for i in range(N):
-            for Ch in range(12):
-                Val = self.GetInputVoltage(Board, Ch)
-                ValList[Ch] = (ValList[Ch] * i + Val) / (i + 1)
-        return ValList
+        return self.ReadAdcGenericN(Board, N, self.GetInputVoltage)
 
     def SaveChannelSetting(self, Board):
 

@@ -4,13 +4,16 @@ import BiDAQ
 import logging
 import sys
 
+
 def __MainFunction():
 
     b = BiDAQ.BiDAQ()
-    b.SetLogLevelInfo()
-    logging.StreamHandler(sys.stdout)
-    # b.TestBoards()
-    b.CalibrateAllBoards(True)
+    with b as obj:
+        obj.SetLogLevelInfo()
+        logging.StreamHandler(sys.stdout)
+        # obj.TestBoards()
+        obj.CalibrateAllBoards(True)
+
 
 if __name__ == '__main__':
     sys.exit(__MainFunction())
