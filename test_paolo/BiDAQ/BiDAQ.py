@@ -196,7 +196,7 @@ class BiDAQ:
                                                                                                            Enable,
                                                                                                            Freq))
                     BrdIdx = self.FindBoardIdx(Brd)
-                    CmdReply = self.Board[BrdIdx].WriteFilterSettings(Channel, Freq, Enable, Input)
+                    CmdReply = self.Board[BrdIdx].WriteFilterSettingsWithADCCalibration(Channel, Freq, Enable, Input)
                     Status = CmdReply.Status
                     if CmdReply.Status:
                         warnings.warn(
@@ -234,7 +234,7 @@ class BiDAQ:
                                                                                                               Enable,
                                                                                                               Freq))
                     BrdIdx = self.FindBoardIdx(Brd)
-                    CmdReply = self.Board[BrdIdx].WriteFilterSettings(Channel, Freq, Enable, Ground)
+                    CmdReply = self.Board[BrdIdx].WriteFilterSettingsWithADCCalibration(Channel, Freq, Enable, Ground)
                     Status = CmdReply.Status
                     if CmdReply.Status:
                         warnings.warn(
@@ -371,9 +371,9 @@ class BiDAQ:
                     Board, CmdReply.Status, CmdReply.Value))
                 return CmdReply.Status
 
-            CmdReply = self.Board[Board].WriteFilterEnable(Ch, FilterEnable[Ch])
+            CmdReply = self.Board[Board].WriteFilterEnableWithADCCalibration(Ch, FilterEnable[Ch])
             if CmdReply.Status:
-                log.warning("Warning. WriteFilterEnable - Brd: {}, Status: {}, Value: {}".format(
+                log.warning("Warning. WriteFilterEnableWithADCCalibration - Brd: {}, Status: {}, Value: {}".format(
                     Board, CmdReply.Status, CmdReply.Value))
                 return CmdReply.Status
 
@@ -396,7 +396,7 @@ class BiDAQ:
             log.warning("Warning. SaveChannelSetting - Brd: {}, Status: {}".format(Board, Status))
             return Status
 
-        CmdReply = self.Board[Board].WriteFilterSettings(0, FilterFreq, FilterEnable, 1)
+        CmdReply = self.Board[Board].WriteFilterSettingsWithADCCalibration(0, FilterFreq, FilterEnable, 1)
         if CmdReply.Status:
             log.warning("Warning. WriteInputGrounded - Brd: {}, Status: {}, Value: {}".format(Board, CmdReply.Status,
                                                                                               CmdReply.Value))
@@ -475,7 +475,7 @@ class BiDAQ:
             log.warning("Warning. SaveChannelSetting - Brd: {}, Status: {}".format(Board, Status))
             return Status
 
-        CmdReply = self.Board[Board].WriteFilterSettings(0, FilterFreq, FilterEnable, 2)
+        CmdReply = self.Board[Board].WriteFilterSettingsWithADCCalibration(0, FilterFreq, FilterEnable, 2)
         if CmdReply.Status:
             log.warning("Warning. WriteInputGrounded - Brd: {}, Status: {}, Value: {}".format(Board, CmdReply.Status,
                                                                                               CmdReply.Value))

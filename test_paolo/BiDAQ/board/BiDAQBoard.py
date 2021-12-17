@@ -349,6 +349,12 @@ class BiDAQBoard:
     def WriteFilterEnable(self, Channel, Enable, Queue=False):
         return self.SendCommand("FILTER_ENABLE_WRITE", int(Enable) << 24, Channel, self.DefaultTimeout, Queue)
 
+    def WriteFilterEnableWithADCCalibration(self, Channel, Enable, Queue=False):
+        CmdReply = self.WriteFilterEnable(Channel, Enable, Queue)
+        if CmdReply.Status:
+            return CmdReply
+        return self.RecallADCCalibrationWithCheck(Channel, Enable, Queue)
+
     # Read filter enable setting
     def ReadFilterEnable(self, Channel, Queue=False):
         return self.SendCommand("FILTER_ENABLE_READ", 0, Channel, self.DefaultTimeout, Queue)
@@ -375,6 +381,32 @@ class BiDAQBoard:
     def WriteFilterSettings(self, Channel, Frequency, Enable, Grounded, Queue=False):
         Value = (Frequency << 16) + (int(Enable) << 8) + int(Grounded)
         return self.SendCommand("FREQUENCY_AND_ENABLE", Value, Channel, 0.5, Queue)
+
+    # Recall the ADC gain calibration, checking that it was actually set (uncalibrated value in memory is 0x800000)
+    def RecallADCCalibrationWithCheck(self, Channel, FilterEnable, Queue=False):
+        if FilterEnable:
+            CalibrationType = 1
+        else:
+            CalibrationType = 2
+        if Channel == 0:
+            ChannelList = range(1, 13)
+        else:
+            ChannelList = range(Channel, Channel + 1)
+        CmdReply = BiDAQCmdReply.BiDAQCmdReply()
+        for Ch in ChannelList:
+            CmdReply = self.ReadADCCalibration(Ch, CalibrationType + 2, Queue)
+            if CmdReply.Status:
+                return CmdReply
+            if CmdReply.Value != 0x800000:
+                CmdReply = self.RecallADCCalibration(Ch, CalibrationType, Queue)
+        return CmdReply
+
+    # Write all the filter settings (cut-off frequency, filter enable, input connection)
+    def WriteFilterSettingsWithADCCalibration(self, Channel, Frequency, Enable, Grounded, Queue=False):
+        CmdReply = self.WriteFilterSettings(Channel, Frequency, Enable, Grounded, Queue)
+        if CmdReply.Status:
+            return CmdReply
+        return self.RecallADCCalibrationWithCheck(Channel, Enable, Queue)
 
     # Write trimmer value
     def WriteTrimmer(self, Channel, TrimmerNumber, Value, Queue=False):
@@ -725,13 +757,13 @@ class BiDAQBoard:
                 log.error("Filter enable test - Error during read - Status: {}".format(CmdReply.Status))
                 return -1
             OldValue = CmdReply.Value
-            self.WriteFilterEnable(i, int(not OldValue))
+            self.WriteFilterEnableWithADCCalibration(i, int(not OldValue))
             CmdReply = self.ReadFilterEnable(i)
             if CmdReply.Value != int(not OldValue):
                 log.warning("ERROR - Wrote: {}, read: {}".format(int(not OldValue), CmdReply.Value))
                 TestStatus = TestStatus + 1
                 TestFailed.append("Filter enable")
-            self.WriteFilterEnable(i, OldValue)
+            self.WriteFilterEnableWithADCCalibration(i, OldValue)
         ErrorCntTmp = self.CheckErrorCounter(ErrorCnt)
         if ErrorCntTmp >= 0:
             if ErrorCntTmp > ErrorCnt or TestStatusNew != TestStatus:
@@ -799,8 +831,8 @@ class BiDAQBoard:
         log.info("Noise test - Started")
         TestStatusNew = TestStatus
         Duration = 1
-        # self.WriteFilterSettings(0, 100, 1, 2)
-        self.WriteFilterSettings(0, 100, 1, 3)
+        # self.WriteFilterSettingsWithADCCalibration(0, 100, 1, 2)
+        self.WriteFilterSettingsWithADCCalibration(0, 100, 1, 3)
         self.WriteADCInputShorted(0, 0)
         self.AutomaticADCCalibration(0)
         self.WriteADCFrequency(0, 1000)
