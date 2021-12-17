@@ -396,28 +396,14 @@ class BiDAQ:
 
             return 0
 
-    def CalibrateOffset(self, Board, FilterEnable=1, AvgN=100, OffsetThr=10, Pause=1, DaqFreq=100, FilterFreq=24):
-        log.info("Calibration started - Offset")
+    def CalibrateOffsetWithCurrentSettings(self, Board, DaqFreq, AvgN=100, Pause=0.2, OffsetThr=10):
+        log.info("Calibration started - Offset - Current settings")
         log.info("Board:        {}".format(Board))
-        log.info("FilterEnable: {}".format(FilterEnable))
         log.info("AvgN:         {}".format(AvgN))
-        log.info("OffsetThr:    {}".format(OffsetThr))
         log.info("Pause:        {}".format(Pause))
         log.info("DaqFreq:      {}".format(DaqFreq))
-        log.info("FilterFreq:   {}".format(FilterFreq))
 
         self.StopDaq(True)
-
-        Status, FilterInputOld, FilterFreqOld, FilterEnableOld = self.SaveChannelSetting(Board)
-        if Status:
-            log.warning("Warning. SaveChannelSetting - Brd: {}, Status: {}".format(Board, Status))
-            return Status
-
-        CmdReply = self.Board[Board].WriteFilterSettingsWithADCCalibration(0, FilterFreq, FilterEnable, 1)
-        if CmdReply.Status:
-            log.warning("Warning. WriteInputGrounded - Brd: {}, Status: {}, Value: {}".format(Board, CmdReply.Status,
-                                                                                              CmdReply.Value))
-            return CmdReply.Status
         self.StartAdc(DaqFreq)
         time.sleep(Pause)
         Data = self.ReadAdcValueN(Board, AvgN)
@@ -453,7 +439,6 @@ class BiDAQ:
         self.StartAdc(DaqFreq)
         time.sleep(Pause)
         DataAfter = self.ReadAdcValueN(Board, AvgN)
-        # pprint.pprint(Data)
         for Ch in range(12):
             DeltaOff = round(DataAfter[Ch] - 0x800000)
             log.info("Offset result - Ch: {}, DataBefore: 0x{:X}, DataAfter: 0x{:X}, Error: {}".format(
@@ -463,17 +448,44 @@ class BiDAQ:
                     "Warning. Offset calibration out of threshold - Brd: {}, Ch {}, Delta: {}".format(Board, Ch + 1,
                                                                                                       DeltaOff))
         self.StopDaq(True)
+        self.StartAdc()
+
+        return 0
+
+    def CalibrateOffset(self, Board, FilterEnable=1, AvgN=100, OffsetThr=10, Pause=0.2, DaqFreq=100, FilterFreq=24):
+        log.info("Calibration started - Offset")
+        log.info("Board:        {}".format(Board))
+        log.info("FilterEnable: {}".format(FilterEnable))
+        log.info("AvgN:         {}".format(AvgN))
+        log.info("OffsetThr:    {}".format(OffsetThr))
+        log.info("Pause:        {}".format(Pause))
+        log.info("DaqFreq:      {}".format(DaqFreq))
+        log.info("FilterFreq:   {}".format(FilterFreq))
+
+        Status, FilterInputOld, FilterFreqOld, FilterEnableOld = self.SaveChannelSetting(Board)
+        if Status:
+            log.warning("Warning. SaveChannelSetting - Brd: {}, Status: {}".format(Board, Status))
+            return Status
+
+        CmdReply = self.Board[Board].WriteFilterSettingsWithADCCalibration(0, FilterFreq, FilterEnable, 1)
+        if CmdReply.Status:
+            log.warning("Warning. WriteInputGrounded - Brd: {}, Status: {}, Value: {}".format(Board, CmdReply.Status,
+                                                                                              CmdReply.Value))
+            return CmdReply.Status
+
+        Status = self.CalibrateOffsetWithCurrentSettings(Board, DaqFreq, AvgN, Pause, OffsetThr)
+        if Status:
+            log.warning("Warning. CalibrateOffsetWithCurrentSettings - Brd: {}, Status: {}".format(Board, Status))
+            return Status
 
         Status = self.RestoreChannelSetting(Board, FilterInputOld, FilterFreqOld, FilterEnableOld)
         if Status:
             log.warning("Warning. WriteChannelSetting - Brd: {}, Status: {}".format(Board, Status))
             return Status
 
-        self.StartAdc()
-
         return 0
 
-    def CalibrateGain(self, Board, SaveInMemory=False, FilterEnable=1, AvgN=100, GainThrPpm=3, Pause=1, DaqFreq=100,
+    def CalibrateGain(self, Board, SaveInMemory=False, FilterEnable=1, AvgN=100, GainThrPpm=3, Pause=0.2, DaqFreq=100,
                       FilterFreq=24):
         log.info("Calibration started - Gain")
         log.info("Board:        {}".format(Board))
@@ -502,9 +514,8 @@ class BiDAQ:
             CmdReply = self.Board[Board].ReadADCCalibration(Ch + 1, 1)
             if CmdReply.Status:
                 log.warning(
-                    "Warning. ReadADCCalibration - Brd: {}, Ch {}, Status: {}, Value: {}".format(Board, Ch + 1,
-                                                                                                 CmdReply.Status,
-                                                                                                 CmdReply.Value))
+                    "Warning. ReadADCCalibration - Brd: {}, Ch {}, Status: {}, Value: {}".format(
+                        Board, Ch + 1, CmdReply.Status, CmdReply.Value))
                 return CmdReply.Status
             GainCurr[Ch] = CmdReply.Value
         self.StartAdc(DaqFreq)
@@ -574,13 +585,75 @@ class BiDAQ:
 
         return 0
 
-    def CalibrateBoard(self, Board, SaveInMemory=False, FilterEnable=True, AvgN=100, OffsetThr=10, GainThrPpm=3,
-                       Pause=1, DaqFreq=100, FilterFreq=24):
+    def CheckGainCalibration(self, Board, DaqFreq, AvgN=100, GainThrPpm=3, Pause=0.2):
+
+        log.info("Check gain error started")
+
+        FilterInput = list(range(12))
+        for Ch in range(12):
+            CmdReply = self.Board[Board].ReadInputGrounded(Ch + 1)
+            if CmdReply.Status:
+                log.warning("Warning. ReadInputGrounded - Brd: {}, Status: {}, Value: {}".format(
+                    Board, CmdReply.Status, CmdReply.Value))
+                return CmdReply.Status
+            FilterInput[Ch] = CmdReply.Value
+
+        self.StopDaq(True)
+        self.StartAdc(DaqFreq)
+        CmdReply = self.Board[Board].WriteInputGrounded(0, 3)
+        if CmdReply.Status:
+            log.warning("Warning. WriteInputGrounded - Brd: {}, Status: {}, Value: {}".format(Board, CmdReply.Status,
+                                                                                              CmdReply.Value))
+            return CmdReply.Status
+        time.sleep(Pause)
+        DataNeg = self.ReadAdcVoltageN(Board, AvgN)
+        CmdReply = self.Board[Board].WriteInputGrounded(0, 2)
+        if CmdReply.Status:
+            log.warning("Warning. WriteInputGrounded - Brd: {}, Status: {}, Value: {}".format(Board, CmdReply.Status,
+                                                                                              CmdReply.Value))
+            return CmdReply.Status
+        time.sleep(Pause)
+        DataPos = self.ReadAdcVoltageN(Board, AvgN)
+        self.StopDaq(True)
+        Status = 0
+        GainErrorPpm = [0.] * 12
+        for Ch in range(12):
+            GainErrorPpm[Ch] = ((DataPos[Ch] - DataNeg[Ch]) / 10 - 1) * 1e6
+            log.info(
+                "Gain calibration - Ch: {}, DataP: {:.6f}, DataN: {:.6f}, GainErr: {:.2f} ppm,".format(
+                    Ch, DataPos[Ch], DataNeg[Ch], GainErrorPpm[Ch]))
+            if abs(GainErrorPpm[Ch]) > GainThrPpm:
+                log.warning(
+                    "Warning. Gain error out of threshold - Brd: {}, Ch {}, Error: {:.2f} ppm".format(
+                        Board, Ch + 1, GainErrorPpm[Ch]))
+                Status = 1
+            CmdReply = self.Board[Board].WriteInputGrounded(Ch, FilterInput[Ch])
+            if CmdReply.Status:
+                log.warning("Warning. WriteInputGrounded - Brd: {}, Status: {}, Value: {}".format(
+                    Board, CmdReply.Status, CmdReply.Value))
+                return CmdReply.Status
+        self.StartAdc()
+        return Status, GainErrorPpm
+
+    def CheckGainCalibrationAllBoards(self, DaqFreq, AvgN=100, GainThrPpm=3, Pause=0.2):
+        Status = 0
+        GainErrorPpm = list()
+        for Brd in self.BoardList:
+            BrdIdx = self.FindBoardIdx(Brd)
+            Status, GainErrorPpmTmp = self.CheckGainCalibration(BrdIdx, DaqFreq, AvgN, GainThrPpm, Pause)
+            if Status < 0:
+                log.warning("Warning. Failed board {} gain check".format(Brd))
+            elif Status > 0:
+                log.warning("Warning. Board {} gain out of threshold".format(Brd))
+            GainErrorPpm = GainErrorPpm + [GainErrorPpmTmp]
+        return Status, GainErrorPpm
+
+    def CalibrateBoard(self, Board, SaveInMemory=False, AvgN=100, OffsetThr=10, GainThrPpm=3, Pause=0.2, DaqFreq=100,
+                       FilterFreq=24):
 
         log.info("Calibration started")
         log.info("Board:        {}".format(Board))
         log.info("SaveInMemory: {}".format(SaveInMemory))
-        log.info("FilterEnable: {}".format(FilterEnable))
         log.info("AvgN:         {}".format(AvgN))
         log.info("OffsetThr:    {}".format(OffsetThr))
         log.info("GainThrPpm:   {}".format(GainThrPpm))
@@ -602,13 +675,13 @@ class BiDAQ:
             return -1
         return 0
 
-    def CalibrateAllBoards(self, SaveInMemory=False, FilterEnable=True, AvgN=100, OffsetThr=10, GainThrPpm=3,
-                           Pause=1, DaqFreq=100, FilterFreq=24):
+    def CalibrateAllBoards(self, SaveInMemory=False, AvgN=100, OffsetThr=10, GainThrPpm=3, Pause=0.2, DaqFreq=100,
+                           FilterFreq=24):
         Status = 0
         for Brd in self.BoardList:
             BrdIdx = self.FindBoardIdx(Brd)
             if self.CalibrateBoard(
-                    BrdIdx, SaveInMemory, FilterEnable, AvgN, OffsetThr, GainThrPpm, Pause, DaqFreq, FilterFreq):
+                    BrdIdx, SaveInMemory, AvgN, OffsetThr, GainThrPpm, Pause, DaqFreq, FilterFreq):
                 log.warning("Warning. Failed board {} calibration".format(Brd))
                 Status = -1
         return Status

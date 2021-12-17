@@ -12,7 +12,8 @@ def __MainFunction():
         obj.SetLogLevelInfo()
         logging.StreamHandler(sys.stdout)
         # obj.TestBoards()
-        obj.CalibrateAllBoards(True)
+        #obj.CalibrateAllBoards(True)
+        Status, BoardRes = obj.CheckGainCalibrationAllBoards(1000, AvgN=1000, GainThrPpm=3, Pause=0.2)
 
 
 if __name__ == '__main__':
