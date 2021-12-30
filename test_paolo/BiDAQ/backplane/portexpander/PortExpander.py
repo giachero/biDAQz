@@ -20,9 +20,9 @@ class PortExpander:
         self.PortMapping = (0, 1, 0, 1)
 
         # Set forbidden pins (those used by the crate address)
-        self.ChipForbidden = (0, 0, 0, 0, 0)
-        self.PortForbidden = (0, 0, 0, 0, 0)
-        self.PinForbidden = (0, 1, 2, 3, 4)
+        self.ChipForbidden = (0, 0, 0, 0, 0, 0, 0, 0)
+        self.PortForbidden = (0, 0, 0, 0, 0, 0, 0, 0)
+        self.PinForbidden = (0, 1, 2, 3, 4, 5, 6, 7)
 
     def GetCrateId(self):
         return self.Chip[0].getPortInput(0) >> 1
@@ -40,5 +40,16 @@ class PortExpander:
     def SetPinDir(self, Port, Pin, Dir):
         if self.CheckAllowed(Port, Pin):
             self.Chip[self.ChipMapping[Port]].setPinDir(self.PortMapping[Port], Pin, Dir)
+
+    def SetPinValue(self, Port, Pin, Value):
+        if self.CheckAllowed(Port, Pin):
+            self.Chip[self.ChipMapping[Port]].setPinOutput(self.PortMapping[Port], Pin, Value)
+
+    def ResetBoards(self):
+        for Pin in range(8):
+            self.SetPinDir(1, Pin, 0)
+            self.SetPinValue(1, Pin, 0)
+            self.SetPinDir(1, Pin, 1)
+            self.SetPinValue(1, Pin, 1)
 
     # TODO: Expand functions

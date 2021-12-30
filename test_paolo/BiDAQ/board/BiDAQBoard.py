@@ -94,7 +94,7 @@ class BiDAQBoard:
         while msg is not None:
             msg = self.CANReader.get_message(0.000001)
 
-    def SendCommand(self, CommandStr, Data, Channel=0, Timeout=DefaultTimeout, Queue=False):
+    def SendCommand(self, CommandStr, Data, Channel=0, Timeout=DefaultTimeout, Queue=False, NoWarning=False):
 
         self.FlushBuffer()
 
@@ -109,7 +109,7 @@ class BiDAQBoard:
             "SendCommand - Cmd: {} - Data: {} - Ch {} - Timeout: {} - Queue: {}".format(CommandStrExt, Data, Channel,
                                                                                         Timeout, Queue))
 
-        WakeReply = self.Wake()
+        WakeReply = self.Wake(NoWarning=NoWarning)
         if WakeReply.Status:
             # raise Exception("The board can't be awaken or does not reply")
             # print("The board can't be awaken or does not reply")
@@ -130,13 +130,14 @@ class BiDAQBoard:
 
         log.debug("SendCommand - Status: {} - RcvData: {} - Return value: {}".format(Status, InData, Value))
 
-        Status = self.CheckStatus(Status)
+        Status = self.CheckStatus(Status, NoWarning)
 
         if Status < 0:
             ErrString = "SendCommand - Command: {}".format(CommandStr)
             if Status == -1:
                 CmdReply.SetWarning()
-                log.warning(ErrString)
+                if not NoWarning:
+                    log.warning(ErrString)
             if Status == -2:
                 CmdReply.SetError()
                 log.error(ErrString)
@@ -158,7 +159,7 @@ class BiDAQBoard:
 
         return Status, InData, Value
 
-    def CheckStatus(self, Status):
+    def CheckStatus(self, Status, NoWarning=False):
 
         if Status == self.CommandDict["CAN_CMD_NOT_IMPLEMENTED"]["CommandByte"]:
             # raise Exception("Error. Command not implemented")
@@ -185,14 +186,16 @@ class BiDAQBoard:
             log.error("CheckStatus - Command error")
             Status = -2
         elif Status == self.CommandDict["CAN_CMD_BUSY"]["CommandByte"]:
-            log.warning("CheckStatus - Board is busy")
+            if not NoWarning:
+                log.warning("CheckStatus - Board is busy")
             Status = -1
         elif Status == self.CommandDict["CAN_CMD_WARNING"]["CommandByte"]:
-            log.warning("CheckStatus - Command warning")
+            if not NoWarning:
+                log.warning("CheckStatus - Command warning")
             Status = -1
         return Status
 
-    def CheckReply(self, CommandStr, Channel=0, Timeout=DefaultTimeout):
+    def CheckReply(self, CommandStr, Channel=0, Timeout=DefaultTimeout, NoWarning=False):
 
         CmdReply = BiDAQCmdReply.BiDAQCmdReply()
 
@@ -225,13 +228,14 @@ class BiDAQBoard:
         CmdReply.Value = Value
         CmdReply.SetSuccess()
 
-        Status = self.CheckStatus(Status)
+        Status = self.CheckStatus(Status, NoWarning=NoWarning)
 
         if Status < 0:
             ErrString = "CheckReply - Command: {}".format(CommandStr)
             if Status == -1:
                 CmdReply.SetWarning()
-                log.warning(ErrString)
+                if not NoWarning:
+                    log.warning(ErrString)
             if Status == -2:
                 CmdReply.SetError()
                 log.error(ErrString)
@@ -241,7 +245,7 @@ class BiDAQBoard:
         return CmdReply
 
     # Wake board from powerdown. The function waits a maximum of 0.1 s
-    def Wake(self):
+    def Wake(self, NoWarning=False):
 
         TimeoutNOP = 0
         TimeoutReply = 0.01
@@ -255,7 +259,7 @@ class BiDAQBoard:
             # noinspection PyBroadException
             try:
                 # Check the reply
-                CmdReply = self.CheckReply("NOP", 0, TimeoutReply)
+                CmdReply = self.CheckReply("NOP", 0, TimeoutReply, NoWarning=NoWarning)
                 # If there is a reply, then break the cycle
                 if CmdReply.Status == CmdReply.SUCCESS:
                     break
@@ -296,8 +300,8 @@ class BiDAQBoard:
         return 0
 
     # No OPeration (NOP) command
-    def NOP(self, Queue=False):
-        return self.SendCommand("NOP", 0, 0, self.DefaultTimeout, Queue)
+    def NOP(self, Queue=False, NoWarning=False):
+        return self.SendCommand("NOP", 0, 0, self.DefaultTimeout, Queue, NoWarning=NoWarning)
 
     # Write ID to memory. The ID can be 16 bit maximum
     def WriteID(self, ID, Queue=False):

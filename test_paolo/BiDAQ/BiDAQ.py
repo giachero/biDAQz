@@ -3,6 +3,7 @@
 from board import BiDAQBoard
 from fpga import BiDAQFPGA
 from backplane import BiDAQBackplane
+from firmware_flash import FirmwareFlash
 
 import warnings
 import logging
@@ -49,10 +50,15 @@ class BiDAQ:
             using FPGA SysID register (to read how many blocks are instantiated) and querying boards with NOP commands
             through CAN bus.
         :type BoardList: list or tuple of integers
+        :param Verbose: Logging verbosity. If True, set logging verbosity to INFO, otherwise leave to WARNING
+        :type Verbose: bool
         """
 
+        # Set verbosity
         if Verbose:
             self.SetLogLevelInfo()
+        else:
+            self.SetLogLevelWarning()
 
         # Init the FPGA registers, if BoardList is None, the class will determine automatically the number of boards by
         # looking at the SysID register defined at build time
@@ -62,6 +68,7 @@ class BiDAQ:
         if self.FPGA.SysId.GetFwRevision() > 4:
             self.Backplane = BiDAQBackplane.BiDAQBackplane()
 
+        # Get Crate number from Backplane class, or set from input arguments
         if Crate is None:
             try:
                 self.Crate = self.Backplane.Crate
@@ -70,6 +77,7 @@ class BiDAQ:
         else:
             self.Crate = Crate
 
+        # Set crate Half from Backplane class, or set from input arguments
         if Half is None:
             try:
                 self.Half = self.Backplane.Half
@@ -107,7 +115,7 @@ class BiDAQ:
             print(f'exc_value: {exc_value}')
             print(f'exc_traceback: {exc_traceback}')
 
-    def InitBoards(self):
+    def InitBoards(self, NoWarning=False):
         """
         Initialize :class:`board.BiDAQBoard` class by checking that the boards are replying correctly. The function
         uses *BoardList* instance variable as the list of boards to scan.
@@ -123,16 +131,18 @@ class BiDAQ:
 
         for CurrentBoard in self.FPGA.BoardList:
             Board.append(BiDAQBoard.BiDAQBoard(self.Crate & 0xF, CurrentBoard + 8 * self.Half))
-            CmdReply = Board[-1].NOP()
+            CmdReply = Board[-1].NOP(NoWarning=NoWarning)
             if CmdReply.Status:
                 Board.pop()
                 BoardList.remove(CurrentBoard)
             else:
                 Board[-1].InitBoard()
+                Board[-1].StopDAQ(0)
         self.BoardList = BoardList
 
         if len(BoardList) is 0:
-            log.warning("No boards found during initialization")
+            if not NoWarning:
+                log.warning("No boards found during initialization")
 
         log.info("Final BoardList: {}".format(BoardList))
 
@@ -320,7 +330,7 @@ class BiDAQ:
     def ReadAdcGenericN(self, Board, N, GetInputValueFcn):
         ValList = [0] * 12
         TimestampList = [-1] * 12
-        Timeout = self.FPGA.SyncGenerator.GetDivider(Board) / 500000 * 2 * 1.1
+        Timeout = self.FPGA.SyncGenerator.GetDivider(Board) / 500000 * 2 * 1.1 + 0.001
         for i in range(N):
             for Ch in range(12):
                 Val = TimestampList[Ch]
@@ -587,7 +597,7 @@ class BiDAQ:
 
     def CheckGainCalibration(self, Board, DaqFreq, AvgN=100, GainThrPpm=3, Pause=0.2):
 
-        log.info("Check gain error started")
+        log.info("Check gain error started - Board {}".format(Board))
 
         FilterInput = list(range(12))
         for Ch in range(12):
@@ -599,6 +609,7 @@ class BiDAQ:
             FilterInput[Ch] = CmdReply.Value
 
         self.StopDaq(True)
+        # self.Board[Board].WriteADCInputBufferEnable(0, 0)
         self.StartAdc(DaqFreq)
         CmdReply = self.Board[Board].WriteInputGrounded(0, 3)
         if CmdReply.Status:
@@ -758,6 +769,39 @@ class BiDAQ:
 
         return 0
 
+    def ResetBoards(self, Timeout=30):
+
+        self.StopDaq(True, True)
+
+        OldBoards = self.BoardList
+        self.BoardList = None
+
+        self.Backplane.PortExpander.ResetBoards()
+
+        StartTime = time.time()
+        while (time.time() - StartTime) < Timeout:
+            self.Board, self.BoardList = self.InitBoards(NoWarning=True)
+            if self.BoardList == OldBoards:
+                break
+            else:
+                time.sleep(0.5)
+
+        if self.BoardList != OldBoards:
+            log.error("Some boards did not reply after restart")
+            return -1
+        else:
+            log.info("Init complete - Crate: {}, Half: {}, BoardList: {}".format(self.Crate, self.Half, self.BoardList))
+
+        # Disable powerdown for all boards
+        if self.SetPowerdownDisableAll() < 0:
+            log.warning("Can't disable powerdown on boards")
+
+        # Start ADCs read for all boards
+        if self.StartAdc() < 0:
+            log.info("Can't start ADCs continuous read. Boards might be already enabled")
+
+        return 0
+
     # Start DAQ
     def StartDaq(self, IpAdrDst, UdpPortDst, Frequency, SamplesPerPacket=180, AdcParallelReadout=True,
                  DropTimestamp=True, RTPPayloadType=20, BoardList=None, Gpio=False):
@@ -880,7 +924,7 @@ class BiDAQ:
         return 0
 
     # Stop DAQ
-    def StopDaq(self, FullStop=False):
+    def StopDaq(self, FullStop=False, OnlyFpga=False):
         """
         Stop the DAQ.
 
@@ -901,17 +945,19 @@ class BiDAQ:
             self.FPGA.GpioControl.SetVirtualGpioEnable(0)
         Status = 0
 
-        if self.SetPowerdownDisableAll():
-            return -1
+        if not OnlyFpga:
+            if self.SetPowerdownDisableAll():
+                return -1
         if FullStop:
-            for Brd in self.BoardList:
-                BrdIdx = self.FindBoardIdx(Brd)
-                CmdReply = self.Board[BrdIdx].StopDAQ(0)
-                Status = CmdReply.Status
-                if CmdReply.Status:
-                    warnings.warn("Warning. StopDAQ - Brd: {}, Status: {}, Value: {}".format(Brd, CmdReply.Status,
-                                                                                             CmdReply.Value))
-                    return -1
+            if not OnlyFpga:
+                for Brd in self.BoardList:
+                    BrdIdx = self.FindBoardIdx(Brd)
+                    CmdReply = self.Board[BrdIdx].StopDAQ(0)
+                    Status = CmdReply.Status
+                    if CmdReply.Status:
+                        warnings.warn("Warning. StopDAQ - Brd: {}, Status: {}, Value: {}".format(Brd, CmdReply.Status,
+                                                                                                 CmdReply.Value))
+                        return -1
 
             Enabled = 0
             for Brd in range(0, len(self.Board)):
@@ -962,6 +1008,18 @@ class BiDAQ:
             for Ch in range(0, 12):
                 InputValues = InputValues + [self.GetInputValue(Brd, Ch)]
         return InputValues
+
+    def FlashBoards(self, BinFile):
+
+        self.SetLogLevelWarning()
+
+        self.Backplane.PortExpander.ResetBoards()
+        time.sleep(0.1)
+
+        Flash = FirmwareFlash.FirmwareFlash()
+        Flash.DoFlash(BinFile)
+
+        self.ResetBoards()
 
     def GetFPGAMonitorRegisters(self):
         """
