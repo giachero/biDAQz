@@ -6,9 +6,8 @@ import sys
 
 def __MainFunction():
 
-    b = BiDAQ.BiDAQ()
+    b = BiDAQ.BiDAQ(Verbose=True)
     with b as obj:
-        obj.SetLogLevelInfo()
         obj.FlashBoards("/Bessel_CUPID.bin")
 
 

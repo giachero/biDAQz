@@ -40,7 +40,7 @@ class BiDAQ:
     :vartype Backplane: :class:`backplane.BiDAQBackplane` class
     """
 
-    def __init__(self, Crate=None, Half=None, BoardList=None, Verbose=False):
+    def __init__(self, Crate=None, Half=None, BoardList=None, Verbose=False, Debug=False):
         """
         :param Crate: Crate number. If None, it is read automatically using the I2C port expander.
         :type Crate: int
@@ -55,7 +55,9 @@ class BiDAQ:
         """
 
         # Set verbosity
-        if Verbose:
+        if Debug:
+            self.SetLogLevelDebug()
+        elif Verbose:
             self.SetLogLevelInfo()
         else:
             self.SetLogLevelWarning()
@@ -107,9 +109,12 @@ class BiDAQ:
             log.warning("Can't disable powerdown on boards")
         return self
 
-    def __exit__(self, exc_type, exc_value, exc_traceback):
+    def __exit__(self, exc_type=None, exc_value=None, exc_traceback=None):
         if self.SetPowerdownEnableAll() < 0:
             log.warning("Can't re-enable powerdown on boards")
+        for Brd in self.Board:
+            Brd.CANNotifier.stop()
+
         if exc_type:
             print(f'exc_type: {exc_type}')
             print(f'exc_value: {exc_value}')
@@ -133,6 +138,7 @@ class BiDAQ:
             Board.append(BiDAQBoard.BiDAQBoard(self.Crate & 0xF, CurrentBoard + 8 * self.Half))
             CmdReply = Board[-1].NOP(NoWarning=NoWarning)
             if CmdReply.Status:
+                Board[-1].CANNotifier.stop()
                 Board.pop()
                 BoardList.remove(CurrentBoard)
             else:
@@ -764,6 +770,9 @@ class BiDAQ:
             self.FPGA.SyncGenerator.Reset(Brd)
             self.FPGA.SyncGenerator.SetEnable(1, Brd)
 
+        # Each FPGA runs from its own clock, they are synced only when the DAQ is started (with StartDaq method)
+        self.FPGA.SetSlave()
+
         # Start the acquisition by applying the sync clock, in common to all boards
         self.FPGA.ClockRefGenerator.SetEnable(1)
 
@@ -1011,8 +1020,6 @@ class BiDAQ:
 
     def FlashBoards(self, BinFile):
 
-        self.SetLogLevelWarning()
-
         self.Backplane.PortExpander.ResetBoards()
         time.sleep(0.1)
 
@@ -1170,54 +1177,57 @@ def __MainFunction():
     logging.basicConfig(stream=sys.stderr, level=LogLevel)
 
     # Init class
-    Daq = BiDAQ(Options.Crate, Options.Half, Options.Boards)
+    DaqTmp = BiDAQ(Options.Crate, Options.Half, Options.Boards)
 
     Status = -1
 
-    if str.lower(Args[0]) == 'stop':
+    with DaqTmp as Daq:
 
-        logging.info("Stopping DAQ...")
-        Status = Daq.StopDaq()
-        if Status < 0:
-            logging.error("Error: Can't stop DAQ")
-        else:
-            logging.info("Done")
+        if str.lower(Args[0]) == 'stop':
 
-    if str.lower(Args[0]) == 'start':
-
-        BrdList = Daq.BoardList
-        # Build channel config list according to input options. Apply the same settings to all channels
-        CfgList = [
-            [BrdList, [0], Options.InputConnection, Options.FilterEnable, Options.FilterFreq]
-        ]
-        Daq.SetChannelConfigList(CfgList)
-
-        if Daq.FPGA.SysId.GetFwRevision() > 4:
-            if Options.Master:
-                Daq.FPGA.SetMaster()
+            logging.info("Stopping DAQ...")
+            Status = Daq.StopDaq(FullStop=True)
+            Daq.FPGA.SetSlave()
+            if Status < 0:
+                logging.error("Error: Can't stop DAQ")
             else:
-                Daq.FPGA.SetSlave()
+                logging.info("Done")
 
-        if Options.Gpio:
-            Daq.EnableGpio(Options.VirtualGpio, Options.ADCParallelReadout)
+        if str.lower(Args[0]) == 'start':
 
-        logging.info("Starting DAQ...")
-        Status = Daq.StartDaq(Options.IpAdrDst, Options.UdpPortDst, Options.DaqFreq,
-                              Options.SamplesPerPacket, Options.ADCParallelReadout, Options.DropTimestamp,
-                              Options.RTPPayloadType, None, Options.Gpio)
-        if Status < 0:
-            logging.error("Error: Can't start DAQ")
-        else:
-            logging.info("Done")
+            BrdList = Daq.BoardList
+            # Build channel config list according to input options. Apply the same settings to all channels
+            CfgList = [
+                [BrdList, [0], Options.InputConnection, Options.FilterEnable, Options.FilterFreq]
+            ]
+            Daq.SetChannelConfigList(CfgList)
 
-    if str.lower(Args[0]) == 'getboardlist':
-        BoardNumList = list()
-        for BrdIdx in range(len(Daq.Board)):
-            BoardNumList.append(Daq.Board[BrdIdx].Board)
-        Status = BoardNumList
+            if Daq.FPGA.SysId.GetFwRevision() > 4:
+                if Options.Master:
+                    Daq.FPGA.SetMaster()
+                else:
+                    Daq.FPGA.SetSlave()
 
-    if str.lower(Args[0]) == 'getboardnum':
-        Status = len(Daq.Board)
+            if Options.Gpio:
+                Daq.EnableGpio(Options.VirtualGpio, Options.ADCParallelReadout)
+
+            logging.info("Starting DAQ...")
+            Status = Daq.StartDaq(Options.IpAdrDst, Options.UdpPortDst, Options.DaqFreq,
+                                  Options.SamplesPerPacket, Options.ADCParallelReadout, Options.DropTimestamp,
+                                  Options.RTPPayloadType, None, Options.Gpio)
+            if Status < 0:
+                logging.error("Error: Can't start DAQ")
+            else:
+                logging.info("Done")
+
+        if str.lower(Args[0]) == 'getboardlist':
+            BoardNumList = list()
+            for BrdIdx in range(len(Daq.Board)):
+                BoardNumList.append(Daq.Board[BrdIdx].Board)
+            Status = BoardNumList
+
+        if str.lower(Args[0]) == 'getboardnum':
+            Status = len(Daq.Board)
 
     # Required by MATLAB to check the return status
     print(Status)

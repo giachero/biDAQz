@@ -103,6 +103,11 @@ class FirmwareFlash:
             log.info("DoFlash - Command: {}, ID: 0x{:X}".format(Cmd, InDataTmp))
             IDList = IDList + [InDataTmp]
 
+        NMicro = len(IDList)
+        log.info("DoFlash - Found {} microcontrollers".format(NMicro))
+        if NMicro != 8:
+            log.warning("DoFlash - Found {} microcontrollers instead of 8".format(NMicro))
+
         log.info("DoFlash - Selecting microcontrollers for programming")
         for i in range(len(InMsg)):
             self.WriteMessage('ENTER_FLASH', InMsg[i].data, Timeout=0)
@@ -145,7 +150,7 @@ class FirmwareFlash:
 
                     WriteData = list(int.to_bytes(ChecksumH, 4, 'little')) + list(int.to_bytes(ChecksumL, 4, 'little'))
 
-                    log.info("DoFlash - Sending checksum {}".format(WriteData))
+                    log.info("DoFlash - Sending checksum")
                     self.WriteMessage('SEND_CHECKSUM', WriteData)
 
                     StartTime = time.time()
@@ -181,7 +186,7 @@ class FirmwareFlash:
                 if AllReplied:
                     log.info("DoFlash - Sector {} flashed correctly on all boards".format(Sector))
                 if not AllReplied:
-                    log.info("DoFlash - Cannot write sector {} on following IDs: {}".format(Sector, IDListCheck))
+                    log.warning("DoFlash - Cannot write sector {} on following IDs: {}".format(Sector, IDListCheck))
 
                 Sector += 1
 
