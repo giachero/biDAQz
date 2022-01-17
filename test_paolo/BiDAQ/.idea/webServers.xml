@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="b7c0e47a-fc44-44af-8238-fcf678c6407a" name="FPGA0">
+        <fileTransfer accessType="SFTP" host="192.168.1.10" port="22" sshConfigId="991189f3-b1b1-4224-82da-795f36fd90fd" sshConfig="root@192.168.1.10:22 password">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+      <webServer id="1bed12a2-379a-48f3-998c-b90481e49ec7" name="FPGA1">
+        <fileTransfer accessType="SFTP" host="192.168.1.11" port="22" sshConfigId="ebf0ac26-7289-4a9d-8d48-2cc58ea04a9d" sshConfig="root@192.168.1.11:22 password">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+      <webServer id="43fe4274-edc6-4c57-babc-01f6c7b904f2" name="FPGA2">
+        <fileTransfer accessType="SFTP" host="192.168.1.12" port="22" sshConfigId="178f44f2-114f-4f8a-b476-4395e820f003" sshConfig="root@192.168.1.12:22 password">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+    <groups>
+      <group>
+        <name>BiDAQ FPGAs</name>
+        <servers>
+          <name value="FPGA0" />
+          <name value="FPGA1" />
+          <name value="FPGA2" />
+        </servers>
+      </group>
+    </groups>
+  </component>
+</project>

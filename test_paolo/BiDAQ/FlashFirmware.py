@@ -8,7 +8,7 @@ def __MainFunction():
 
     b = BiDAQ.BiDAQ(Verbose=True)
     with b as obj:
-        obj.FlashBoards("/Bessel_CUPID.bin")
+        obj.FlashBoards("/daq/daq_class/Bessel_CUPID.bin")
 
 
 if __name__ == '__main__':

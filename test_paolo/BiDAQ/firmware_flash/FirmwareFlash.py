@@ -107,6 +107,9 @@ class FirmwareFlash:
         log.info("DoFlash - Found {} microcontrollers".format(NMicro))
         if NMicro != 8:
             log.warning("DoFlash - Found {} microcontrollers instead of 8".format(NMicro))
+        if NMicro == 0:
+            log.warning("DoFlash - Exiting")
+            return
 
         log.info("DoFlash - Selecting microcontrollers for programming")
         for i in range(len(InMsg)):
