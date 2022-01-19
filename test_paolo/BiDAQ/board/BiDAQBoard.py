@@ -467,8 +467,8 @@ class BiDAQBoard:
         return self.SendCommand("MEMORY_READ", Value, 0, self.DefaultTimeout, Queue)
 
     # Command duration is 2.2 s
-    def FormatMemory(self, Timeout=2.5, Queue=False):
-        return self.SendCommand("ERASE_ALL", 0, 0, Timeout, Queue)
+    def FormatMemory(self, KeepID=True, Timeout=2.5, Queue=False):
+        return self.SendCommand("ERASE_ALL", int(KeepID) << 24, 0, Timeout, Queue)
 
     # Enable on-board DAQ-like measurements (average, RMS, min-max, etc)
     def WriteMeasurementEnable(self, Channel, Enable, Queue=False):
