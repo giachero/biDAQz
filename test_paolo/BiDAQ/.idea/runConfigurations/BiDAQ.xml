@@ -13,7 +13,7 @@
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/BiDAQ.py" />
-    <option name="PARAMETERS" value="" />
+    <option name="PARAMETERS" value="--board-list=0 --filter-frequency=1500 --input-connection=0 --filter-enable --daq-frequency=5000 --ip-address=3232235779 --port=666 --samples-per-packet=180 --virtual-gpio=0 --master start" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />

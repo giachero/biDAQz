@@ -6,7 +6,7 @@ import sys
 
 def __MainFunction():
 
-    b = BiDAQ.BiDAQ(Verbose=True)
+    b = BiDAQ.BiDAQ(Verbose=True, LogToOutput=True)
     with b as obj:
         obj.FlashBoards("/daq/daq_class/Bessel_CUPID.bin")
 

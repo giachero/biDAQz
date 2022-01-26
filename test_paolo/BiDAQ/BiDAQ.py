@@ -40,7 +40,7 @@ class BiDAQ:
     :vartype Backplane: :class:`backplane.BiDAQBackplane` class
     """
 
-    def __init__(self, Crate=None, Half=None, BoardList=None, Verbose=False, Debug=False):
+    def __init__(self, Crate=None, Half=None, BoardList=None, Verbose=False, Debug=False, LogToOutput=False):
         """
         :param Crate: Crate number. If None, it is read automatically using the I2C port expander.
         :type Crate: int
@@ -53,6 +53,12 @@ class BiDAQ:
         :param Verbose: Logging verbosity. If True, set logging verbosity to INFO, otherwise leave to WARNING
         :type Verbose: bool
         """
+
+        # Set log destination
+        if LogToOutput:
+            self.SetLogToOutput()
+        else:
+            self.SetLogToTmp()
 
         # Set verbosity
         if Debug:
@@ -725,7 +731,7 @@ class BiDAQ:
 
         for Brd in BoardListCurr:
             BrdIdx = self.FindBoardIdx(Brd)
-            CmdReply = self.Board[BrdIdx].ReadDAQRunning()
+            CmdReply = self.Board[BrdIdx].ReadDAQRunning(0)
             if CmdReply.Status:
                 log.warning("Warning. ReadDAQRunning - Brd: {}, Status: {}, Value: {}".format(BrdIdx, CmdReply.Status,
                                                                                               CmdReply.Value))
@@ -864,6 +870,14 @@ class BiDAQ:
                 log.warning("Warning. WriteADCMode - Brd: {}, Status: {}, Value: {}".format(BrdIdx, CmdReply.Status,
                                                                                             CmdReply.Value))
                 return CmdReply.Status
+
+            # CmdRep = self.Board[BrdIdx].WriteADCInputBufferEnable(0, 0)
+            # if CmdRep.Status:
+            #     log.warning("Warning. WriteADCInputBufferEnable - Brd: {}, Status: {}, Value: {}".format(BrdIdx,
+            #                                                                                              CmdRep.Status,
+            #                                                                                              CmdRep.Value))
+            #     return CmdReply.Status
+
             CmdReply = self.Board[BrdIdx].StartDAQ(0)
             if CmdReply.Status:
                 log.warning("Warning. StartDAQ - Brd: {}, Status: {}, Value: {}".format(BrdIdx, CmdReply.Status,
@@ -980,15 +994,36 @@ class BiDAQ:
 
     @staticmethod
     def SetLogLevelDebug():
-        logging.basicConfig(level=logging.DEBUG)
+        log.setLevel(logging.DEBUG)
 
     @staticmethod
     def SetLogLevelInfo():
-        logging.basicConfig(level=logging.INFO)
+        log.setLevel(logging.INFO)
 
     @staticmethod
     def SetLogLevelWarning():
-        logging.basicConfig(level=logging.WARNING)
+        log.setLevel(logging.WARNING)
+
+    def SetLogToOutput(self):
+        self.SetLogHandler(True)
+
+    def SetLogToTmp(self):
+        self.SetLogHandler(False)
+
+    @staticmethod
+    def SetLogHandler(LogToOutput):
+        if LogToOutput:
+            NewHandler = logging.StreamHandler(sys.stderr)
+        else:
+            NewHandler = logging.FileHandler('/var/log/bidaq', mode='a')
+            # TODO: install new logging module, with file rotation
+            # NewHandler = logging.RotatingFileHandler('/tmp/bidaq', mode='a', maxBytes=1 * 1024 * 1024, backupCount=10)
+            NewFormatter = logging.Formatter(
+                '%(asctime)-15s::%(levelname)s::%(filename)s::%(funcName)s::%(lineno)d::%(message)s')
+            NewHandler.setFormatter(NewFormatter)
+        for Handler in log.handlers[:]:
+            log.removeHandler(Handler)
+        log.addHandler(NewHandler)
 
     def TestBoards(self):
         for Brd in self.BoardList:
@@ -1160,6 +1195,9 @@ def __MainFunction():
     Parser.add_option("-D", action="store_true", dest="Debug",
                       help="provide debugging information")
 
+    Parser.add_option("-l", action="store_true", dest="LogToOutput",
+                      help="logging to standard output instead of /tmp")
+
     (Options, Args) = Parser.parse_args()
 
     # Check for sane arguments
@@ -1168,16 +1206,9 @@ def __MainFunction():
     if str.lower(Args[0]) not in ('start', 'stop', 'getboardlist', 'getboardnum'):
         Parser.error("invalid argument (start|stop|getboardlist|getboardnum)")
 
-    LogLevel = logging.WARNING
-    if Options.Verbose:
-        LogLevel = logging.INFO
-    if Options.Debug:
-        LogLevel = logging.DEBUG
-
-    logging.basicConfig(stream=sys.stderr, level=LogLevel)
-
     # Init class
-    DaqTmp = BiDAQ(Options.Crate, Options.Half, Options.Boards)
+    DaqTmp = BiDAQ(Crate=Options.Crate, Half=Options.Half, BoardList=Options.Boards, Verbose=Options.Verbose,
+                   Debug=Options.Debug, LogToOutput=Options.LogToOutput)
 
     Status = -1
 

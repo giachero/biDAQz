@@ -7,6 +7,7 @@ import struct
 
 from . import BiDAQCommands
 from . import BiDAQCmdReply
+from . import BiDAQErrors
 
 log = logging.getLogger('BiDAQ.BiDAQBoard')
 
@@ -40,6 +41,7 @@ class BiDAQBoard:
         self.Board = board
         self.ID = int("0x00410000", 16) + (crate << 8) + (board << 4)
         self.CommandDict = BiDAQCommands.Import()
+        self.ErrorDict = BiDAQErrors.Import()
         self.CANBus = can.interface.Bus('can0', bustype='socketcan', bitrate=1000000)
         self.CANReader = can.BufferedReader()
         self.CANNotifier = can.Notifier(self.CANBus, [self.CANReader])
@@ -582,9 +584,9 @@ class BiDAQBoard:
         Value = (Address << 16) + (NData & 0xFFFF)
         return self.SendCommand("ADC_READ_DATA", Value, Channel, self.DefaultTimeout, Queue)
 
-    # Start continuous DAQ. AltSync is 1 for ALT_SYNC mode, or 0 for NORMAL_SYNC mode
-    def ReadDAQRunning(self, Queue=False):
-        return self.SendCommand("ADC_READ_CONTINUOUS", 0, 0, self.DefaultTimeout, Queue)
+    # Read if any channel is in continuous DAQ
+    def ReadDAQRunning(self, Channel, Queue=False):
+        return self.SendCommand("ADC_READ_CONTINUOUS", 0, Channel, self.DefaultTimeout, Queue)
 
     # Start continuous DAQ. AltSync is 1 for ALT_SYNC mode, or 0 for NORMAL_SYNC mode
     def StartDAQ(self, Channel, AltSync=True, Queue=False):
@@ -649,6 +651,32 @@ class BiDAQBoard:
 
     def ReadErrorList(self, Queue=False):
         return self.SendCommand("ERROR_LIST_READ", 0, 0, self.DefaultTimeout, Queue)
+
+    def PrintError(self):
+        Status = 0
+        CmdReply = self.ReadErrorCounter()
+        if CmdReply.Status:
+            OutStr = "Error with ReadErrorCounter()"
+            Status = -1
+        else:
+            ErrorCnt = CmdReply.Value
+            OutStr = "{} error(s)".format(ErrorCnt)
+            if ErrorCnt > 0:
+                CmdReply = self.ReadErrorList()
+                if CmdReply.Status:
+                    OutStr = "Error with ReadErrorList()"
+                    Status = -1
+                else:
+                    SubSysKey = "{}".format(CmdReply.Value[0])
+                    ErrorKey = "{}".format(CmdReply.Value[1])
+                    if len(CmdReply.Value) < 2 or SubSysKey == "0":
+                        OutStr = OutStr + " - Last: None"
+                    else:
+                        SubSys = self.ErrorDict[SubSysKey]["SubSys"]
+                        Error = self.ErrorDict[SubSysKey]["SubDict"][ErrorKey]["Error"]
+                        OutStr = OutStr + " - Last: {}, {}".format(SubSys, Error)
+        print(OutStr)
+        return Status
 
     def WriteErrorMode(self, InstantMode, SaveInMemory=False, Queue=False):
         Value = (int(InstantMode) << 24) + ((int(SaveInMemory) & 1) << 16)
