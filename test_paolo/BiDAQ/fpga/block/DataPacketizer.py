@@ -90,10 +90,50 @@ class DataPacketizer:
         self.FpgaReg.SetBoardSetting("BiDAQ_packetizer_", "PKT_CNT", 0, Board)
         self.FpgaReg.SetBoardSetting("BiDAQ_packetizer_", "DAT_CNT", 0, Board)
 
+    def CheckAllFifoEmpty(self, BoardList=None, ChannelList=None):
+
+        if BoardList is None:
+            BoardList = self.FpgaReg.BoardList.copy()
+            if self.FpgaReg.Gpio is not None:
+                BoardList.append(self.FpgaReg.Gpio)
+
+        if ChannelList is None:
+            ChannelList = list(range(0, 12))
+
+        for Brd in BoardList:
+            if Brd == self.FpgaReg.Gpio:
+                ChannelListCurr = list(range(0, self.FpgaReg.Gpio))
+            else:
+                ChannelListCurr = ChannelList
+            for Ch in ChannelListCurr:
+                FifoFillCount = self.GetFIFOFillCount(Brd, Ch)
+                if not FifoFillCount == 0:
+                    return False
+
+        return True
+
+    def CheckAllPacketCountMatch(self, BoardList=None, CheckGpio=False):
+
+        if BoardList is None:
+            BoardList = self.FpgaReg.BoardList.copy()
+            if CheckGpio and self.FpgaReg.Gpio is not None:
+                BoardList.append(self.FpgaReg.Gpio)
+
+        PacketCountPrev = self.GetPacketCount(BoardList[0])
+
+        for Brd in BoardList[1:]:
+            PacketCount = self.GetPacketCount(Brd)
+            if not PacketCount == PacketCountPrev:
+                return False
+            else:
+                PacketCountPrev = PacketCount
+
+        return True
+
     def GetMonitorRegisters(self, BoardList=None, ChannelList=None):
 
         if BoardList is None:
-            BoardList = self.FpgaReg.BoardList
+            BoardList = self.FpgaReg.BoardList.copy()
             if self.FpgaReg.Gpio is not None:
                 BoardList.append(self.FpgaReg.Gpio)
 

@@ -94,8 +94,12 @@ class BiDAQ:
         else:
             self.Half = Half
 
+        # Check that DAQ is not active, otherwise boards should not be stopped
+        # Boards should be stopped only if they were left running while DAQ is off
+        StopAdc = self.FPGA.ClockRefGenerator.GetEnable() == 0
+
         # Scan the boards and check if they reply to a NOP command
-        self.Board, self.BoardList = self.InitBoards()
+        self.Board, self.BoardList = self.InitBoards(StopAdc=StopAdc)
 
         log.info("Init complete - Crate: {}, Half: {}, BoardList: {}".format(self.Crate, self.Half, self.BoardList))
 
@@ -103,9 +107,12 @@ class BiDAQ:
         if self.SetPowerdownDisableAll() < 0:
             log.warning("Can't disable powerdown on boards")
 
-        # Start ADCs read for all boards
-        if self.StartAdc() < 0:
-            log.info("Can't start ADCs continuous read. Boards might be already enabled")
+        # Start ADCs read for all boards if DAQ is not running
+        if self.FPGA.ClockRefGenerator.GetEnable() == 0:
+            if self.StartAdc() < 0:
+                log.info("Can't start ADCs continuous read. Boards might be already enabled")
+        else:
+            log.info("DAQ is enabled. Will not start ADCs")
 
         # Initialize RTP source fields
         self.FPGA.InitRtpSourceIds(0xBDAC, self.Crate, self.Half)
@@ -126,7 +133,7 @@ class BiDAQ:
             print(f'exc_value: {exc_value}')
             print(f'exc_traceback: {exc_traceback}')
 
-    def InitBoards(self, NoWarning=False):
+    def InitBoards(self, StopAdc, NoWarning=False):
         """
         Initialize :class:`board.BiDAQBoard` class by checking that the boards are replying correctly. The function
         uses *BoardList* instance variable as the list of boards to scan.
@@ -149,7 +156,8 @@ class BiDAQ:
                 BoardList.remove(CurrentBoard)
             else:
                 Board[-1].InitBoard()
-                Board[-1].StopDAQ(0)
+                if StopAdc:
+                    Board[-1].StopDAQ(0)
         self.BoardList = BoardList
 
         if len(BoardList) is 0:
@@ -425,11 +433,11 @@ class BiDAQ:
         log.info("Pause:        {}".format(Pause))
         log.info("DaqFreq:      {}".format(DaqFreq))
 
-        self.StopDaq(True)
+        self.StopDaq()
         self.StartAdc(DaqFreq)
         time.sleep(Pause)
         Data = self.ReadAdcValueN(Board, AvgN)
-        self.StopDaq(True)
+        self.StopDaq()
         GainCurr = list(range(12))
         for Ch in range(12):
             CmdReply = self.Board[Board].ReadADCCalibration(Ch + 1, 0)
@@ -469,7 +477,7 @@ class BiDAQ:
                 log.warning(
                     "Warning. Offset calibration out of threshold - Brd: {}, Ch {}, Delta: {}".format(Board, Ch + 1,
                                                                                                       DeltaOff))
-        self.StopDaq(True)
+        self.StopDaq()
         self.StartAdc()
 
         return 0
@@ -519,7 +527,7 @@ class BiDAQ:
         log.info("DaqFreq:      {}".format(DaqFreq))
         log.info("FilterFreq:   {}".format(FilterFreq))
 
-        self.StopDaq(True)
+        self.StopDaq()
 
         Status, FilterInputOld, FilterFreqOld, FilterEnableOld = self.SaveChannelSetting(Board)
         if Status:
@@ -550,7 +558,7 @@ class BiDAQ:
             return CmdReply.Status
         time.sleep(Pause)
         DataNeg = self.ReadAdcVoltageN(Board, AvgN)
-        self.StopDaq(True)
+        self.StopDaq()
         GainError = list(range(12))
         GainNew = list(range(12))
         for Ch in range(12):
@@ -575,7 +583,7 @@ class BiDAQ:
             return CmdReply.Status
         time.sleep(Pause)
         DataPosNew = self.ReadAdcVoltageN(Board, AvgN)
-        self.StopDaq(True)
+        self.StopDaq()
         for Ch in range(12):
             GainErrorBeforePpm = (GainError[Ch] - 1) * 1e6
             GainErrorAfterPpm = ((DataPosNew[Ch] - DataNegNew[Ch]) / 10 - 1) * 1e6
@@ -620,7 +628,7 @@ class BiDAQ:
                 return CmdReply.Status
             FilterInput[Ch] = CmdReply.Value
 
-        self.StopDaq(True)
+        self.StopDaq()
         # self.Board[Board].WriteADCInputBufferEnable(0, 0)
         self.StartAdc(DaqFreq)
         CmdReply = self.Board[Board].WriteInputGrounded(0, 3)
@@ -637,7 +645,7 @@ class BiDAQ:
             return CmdReply.Status
         time.sleep(Pause)
         DataPos = self.ReadAdcVoltageN(Board, AvgN)
-        self.StopDaq(True)
+        self.StopDaq()
         Status = 0
         GainErrorPpm = [0.] * 12
         for Ch in range(12):
@@ -777,7 +785,7 @@ class BiDAQ:
             self.FPGA.SyncGenerator.SetEnable(1, Brd)
 
         # Each FPGA runs from its own clock, they are synced only when the DAQ is started (with StartDaq method)
-        self.FPGA.SetSlave()
+        self.FPGA.SetLocal()
 
         # Start the acquisition by applying the sync clock, in common to all boards
         self.FPGA.ClockRefGenerator.SetEnable(1)
@@ -786,7 +794,7 @@ class BiDAQ:
 
     def ResetBoards(self, Timeout=30):
 
-        self.StopDaq(True, True)
+        self.StopDaq(OnlyFpga=True)
 
         OldBoards = self.BoardList
         self.BoardList = None
@@ -795,7 +803,7 @@ class BiDAQ:
 
         StartTime = time.time()
         while (time.time() - StartTime) < Timeout:
-            self.Board, self.BoardList = self.InitBoards(NoWarning=True)
+            self.Board, self.BoardList = self.InitBoards(StopAdc=True, NoWarning=True)
             if self.BoardList == OldBoards:
                 break
             else:
@@ -845,7 +853,7 @@ class BiDAQ:
         :rtype: int
         """
 
-        Status = self.StopDaq(True)
+        Status = self.StopDaq()
         if Status < 0:
             log.warning("Couldn't stop DAQ")
             return Status
@@ -947,16 +955,23 @@ class BiDAQ:
         return 0
 
     # Stop DAQ
-    def StopDaq(self, FullStop=False, OnlyFpga=False):
+    def StopDaq(self, FullStop=True, OnlyFpga=False):
         """
         Stop the DAQ.
 
         :return: Return status (a negative value means error).
         :rtype: int
         """
+
+        # A full stop means that the FPGA should stop pushing out data packets
         if FullStop:
+            # Stop the reference clock generator so that all the sync blocks cannot generate SYNC signals
             self.FPGA.ClockRefGenerator.SetEnable(0)
-            time.sleep(0.05)  # TODO: poll some registers to check that transmission is over
+            # Wait that all the FIFOs are empty
+            while self.FPGA.FifoOutDataAdapter.GetFillLevel() > 0 \
+                    or self.FPGA.FifoOutData.GetFillLevel() > 0:
+                pass
+            # Also stops the other modules
             self.FPGA.SyncGenerator.SetEnable(0)
             self.FPGA.GeneralEnable.SetEnable(0)
             self.FPGA.BoardControl.SetEnable(0)
@@ -1217,7 +1232,7 @@ def __MainFunction():
         if str.lower(Args[0]) == 'stop':
 
             logging.info("Stopping DAQ...")
-            Status = Daq.StopDaq(FullStop=True)
+            Status = Daq.StopDaq()
             Daq.FPGA.SetSlave()
             if Status < 0:
                 logging.error("Error: Can't stop DAQ")

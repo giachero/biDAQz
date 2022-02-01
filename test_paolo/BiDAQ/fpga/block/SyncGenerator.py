@@ -80,7 +80,7 @@ class SyncGenerator:
     def GetMonitorRegisters(self, BoardList=None):
 
         if BoardList is None:
-            BoardList = self.FpgaReg.BoardList
+            BoardList = self.FpgaReg.BoardList.copy()
 
         RetDict = dict()
 

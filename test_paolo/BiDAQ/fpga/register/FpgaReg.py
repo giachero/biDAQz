@@ -39,9 +39,12 @@ class FpgaReg:
             if Gpio is not None:
                 IterList.append(Gpio)
             for i in IterList:
-                Ret = self.FpgaMem.WriteBits(RegName + str(i), BitName, Data)
+                RegNameTmp = RegName + str(i)
+                Ret = self.FpgaMem.WriteBits(RegNameTmp, BitName, Data)
                 if Ret < 0:
-                    break
+                    raise Exception(
+                        "SetBoardSetting error - RegName: {}, BitName: {}, Data: {}, Board: {}, Gpio: {}".format(
+                            RegNameTmp, BitName, hex(Data), i, Gpio))
         else:
             Ret = self.FpgaMem.WriteBits(RegName + str(Board), BitName, Data)
 

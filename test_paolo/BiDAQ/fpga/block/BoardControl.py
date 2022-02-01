@@ -45,7 +45,7 @@ class BoardControl:
     def GetMonitorRegisters(self, BoardList=None, ChannelList=None):
 
         if BoardList is None:
-            BoardList = self.FpgaReg.BoardList
+            BoardList = self.FpgaReg.BoardList.copy()
 
         if ChannelList is None:
             ChannelList = list(range(0, 12))

@@ -95,6 +95,7 @@ class BiDAQFPGA:
             ClkOutEna = 0
             ClkInEna = 1
 
+        self.ClockRefGenerator.SetEnable(0)
         self.GeneralEnable.SetMaster(MasterSetting)
         self.ClockRefGenerator.SetExternalInputEnable(ClkInEna)
         self.ClockRefGenerator.SetExternalOutputEnable(ClkOutEna)
@@ -105,6 +106,10 @@ class BiDAQFPGA:
 
     def SetMaster(self):
         self.SetClockGeneratorMasterOrSlave(True)
+
+    def SetLocal(self):
+        self.SetSlave()
+        self.ClockRefGenerator.SetExternalInputEnable(0)
 
     def GetMonitorRegisters(self):
 
